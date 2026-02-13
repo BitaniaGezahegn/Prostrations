@@ -11,6 +11,7 @@ const webcamButton = document.getElementById('webcamButton');
 const calibrateButton = document.getElementById('calibrateButton');
 const calibrationSection = document.getElementById('calibrationSection');
 const calibrationStatus = document.getElementById('calibrationStatus');
+const countDisplay = document.getElementById('countDisplay');
 const drawingUtils = new DrawingUtils(canvasCtx);
 
 let stream = null;
@@ -23,6 +24,11 @@ let calibrationStep = 0; // 0: Idle, 1: Set Up, 2: Set Down
 let upY = 0;
 let downY = 0;
 let thresholdY = 0;
+
+// Counter State
+let count = 0;
+let isDown = false; // false = UP, true = DOWN
+let lastStateChangeTime = 0;
 
 // Initialize MediaPipe Pose Landmarker
 const createPoseLandmarker = async () => {
@@ -131,6 +137,8 @@ calibrateButton.addEventListener('click', () => {
         // Note: In MediaPipe, Y increases downwards (0 is top, 1 is bottom)
         thresholdY = upY + (downY - upY) * 0.7;
         
+        count = 0;
+        countDisplay.innerText = count;
         calibrationStep = 0;
         calibrateButton.innerText = "RECALIBRATE";
         calibrationStatus.innerText = `Calibrated! (Thresh: ${thresholdY.toFixed(2)})`;
@@ -155,6 +163,29 @@ async function predictWebcam() {
                 currentPose = landmarks;
                 drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS);
                 drawingUtils.drawLandmarks(landmarks, { radius: 4 });
+
+                // Counting Logic
+                if (thresholdY > 0) {
+                    const nose = landmarks[0];
+                    const now = performance.now();
+                    const DEBOUNCE_DELAY = 300; // ms
+
+                    if (!isDown && nose.y > thresholdY) {
+                        // Transition UP -> DOWN
+                        if (now - lastStateChangeTime > DEBOUNCE_DELAY) {
+                            isDown = true;
+                            lastStateChangeTime = now;
+                        }
+                    } else if (isDown && nose.y < thresholdY) {
+                        // Transition DOWN -> UP (Complete Rep)
+                        if (now - lastStateChangeTime > DEBOUNCE_DELAY) {
+                            isDown = false;
+                            lastStateChangeTime = now;
+                            count++;
+                            countDisplay.innerText = count;
+                        }
+                    }
+                }
             }
         } else {
             currentPose = null;

@@ -68,3 +68,14 @@ video, canvas {
     font-weight: bold;
     color: #555;
 }
+
+#countDisplay {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 4rem;
+    font-weight: bold;
+    color: #00ff00; /* Green for visibility */
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    z-index: 10;
+}
