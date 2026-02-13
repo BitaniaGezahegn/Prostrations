@@ -32,6 +32,9 @@ const saveGoalBtn = document.getElementById('saveGoal');
 const cancelGoalBtn = document.getElementById('cancelGoal');
 const goalError = document.getElementById('goalError');
 const currentSessionRef = document.getElementById('currentSessionRef');
+const goalProgressBarContainer = document.getElementById('goalProgressBarContainer');
+const goalProgressBarFill = document.getElementById('goalProgressBarFill');
+const goalProgressText = document.getElementById('goalProgressText');
 const drawingUtils = new DrawingUtils(canvasCtx);
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -156,6 +159,7 @@ muteButton.addEventListener('click', () => {
 clearButton.addEventListener('click', () => {
     sessionCount = 0;
     countDisplay.innerText = sessionCount;
+    updateGoalProgress();
     // Resets session only
 });
 
@@ -196,6 +200,7 @@ saveGoalBtn.addEventListener('click', () => {
         goalDisplay.innerText = targetGoal;
         goalActionBtn.innerText = "Edit Goal";
         goalModal.classList.add('hidden');
+        updateGoalProgress();
     }
 });
 
@@ -215,6 +220,7 @@ closeSuccess.addEventListener('click', () => {
     targetGoal = 0;
     goalDisplay.innerText = "--";
     goalActionBtn.innerText = "Set Goal";
+    updateGoalProgress();
 });
 
 function speakCount(number) {
@@ -222,6 +228,18 @@ function speakCount(number) {
     if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(number.toString());
         window.speechSynthesis.speak(utterance);
+    }
+}
+
+function updateGoalProgress() {
+    if (targetGoal > 0) {
+        goalProgressBarContainer.classList.remove('hidden');
+        const percentage = Math.min(100, (sessionCount / targetGoal) * 100);
+        goalProgressBarFill.style.width = `${percentage}%`;
+        goalProgressText.innerText = `${sessionCount} / ${targetGoal}`;
+    } else {
+        goalProgressBarContainer.classList.add('hidden');
+        goalProgressBarFill.style.width = '0%';
     }
 }
 
@@ -259,6 +277,7 @@ calibrateButton.addEventListener('click', () => {
         
         sessionCount = 0;
         countDisplay.innerText = sessionCount;
+        updateGoalProgress();
         
         calibrationStep = 0;
         calibrateButton.innerText = "RECALIBRATE";
@@ -380,6 +399,7 @@ async function predictWebcam() {
                             
                             countDisplay.innerText = sessionCount;
                             totalDisplay.innerText = totalCount;
+                            updateGoalProgress();
                             
                             // Pulse Animation
                             countDisplay.classList.add('pulse-anim');
