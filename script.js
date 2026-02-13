@@ -217,13 +217,13 @@ calibrateButton.addEventListener('click', () => {
         // Start Calibration
         calibrationStep = 1;
         calibrateButton.innerText = "SET UP POSITION";
-        calibrationStatus.innerText = "Step 1: Sit/Stand upright, then click button.";
+        calibrationStatus.innerText = "Step 1: Stand upright, then click button.";
     } else if (calibrationStep === 1) {
         // Record UP position
         upY = nose.y;
         calibrationStep = 2;
         calibrateButton.innerText = "SET DOWN POS";
-        calibrationStatus.innerText = "Step 2: Perform Sujud (Prostrate), then click button.";
+        calibrationStatus.innerText = "Step 2: Perform full Prostration, then click button.";
     } else if (calibrationStep === 2) {
         // Record DOWN position
         downY = nose.y;
