@@ -103,6 +103,20 @@ body {
     gap: 10px;
 }
 
+.streak-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #ffaa00;
+    font-weight: 800;
+    font-size: 1.1rem;
+    text-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+}
+
+.streak-badge i {
+    animation: flicker 2s infinite;
+}
+
 /* Layout */
 .app-container {
     max-width: 1200px;
@@ -323,24 +337,58 @@ video, canvas {
     padding: 40px;
 }
 
-.circular-progress-container {
-    position: relative;
-    width: 220px;
-    height: 220px;
+.ritual-card {
+    padding: 20px;
 }
 
-.progress-ring {
+.ritual-ring-container {
+    position: relative;
+    width: 240px;
+    height: 240px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.ritual-ring {
     transform: rotate(-90deg);
 }
 
-.progress-ring__circle {
-    stroke-dasharray: 565.48; /* 2 * PI * 90 */
-    stroke-dashoffset: 565.48;
-    transition: stroke-dashoffset 0.1s linear;
-    filter: drop-shadow(0 0 8px rgba(0, 210, 255, 0.5));
+.ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.05);
 }
 
-.progress-text {
+.ring-progress {
+    fill: none;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s ease;
+}
+
+.ring-progress.glow-complete {
+    filter: drop-shadow(0 0 15px var(--primary-green));
+    stroke: var(--primary-green);
+}
+
+.ring-progress.morning.glow-complete {
+    filter: drop-shadow(0 0 15px var(--primary-blue));
+}
+
+.ring-progress.morning {
+    stroke: var(--primary-blue);
+    stroke-dasharray: 471; /* 2 * PI * 75 */
+    stroke-dashoffset: 471;
+    filter: drop-shadow(0 0 5px rgba(0, 210, 255, 0.4));
+}
+
+.ring-progress.night {
+    stroke: #ffaa00; /* Gold/Orange */
+    stroke-dasharray: 628; /* 2 * PI * 100 */
+    stroke-dashoffset: 628;
+    filter: drop-shadow(0 0 5px rgba(255, 170, 0, 0.4));
+}
+
+.ring-content {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -348,14 +396,46 @@ video, canvas {
     text-align: center;
     display: flex;
     flex-direction: column;
+    align-items: center;
 }
 
-.count-number {
+.ring-number {
     font-family: var(--font-display);
-    font-size: 4rem;
+    font-size: 3.5rem;
     font-weight: 700;
     color: var(--text-main);
     line-height: 1;
+}
+
+/* Session Mini Sensor */
+.session-mini {
+    margin-top: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px 12px;
+    border-radius: 12px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 0.9rem;
+    border: 1px solid var(--glass-border);
+}
+
+.session-label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Quest Completed State */
+.progress-card.quest-completed {
+    transform: scale(0.95);
+    opacity: 0.8;
+    filter: grayscale(0.5);
+    transition: all 0.5s ease;
+}
+.progress-card.quest-completed:hover {
+    opacity: 1;
+    filter: grayscale(0);
 }
 
 .count-label {
@@ -363,6 +443,10 @@ video, canvas {
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 2px;
+}
+
+.full-width-col {
+    grid-column: span 2;
 }
 
 .stats-row {
@@ -403,6 +487,36 @@ video, canvas {
     font-size: 1.5rem;
     font-weight: 700;
     font-family: var(--font-display);
+}
+
+/* Heatmap */
+.heatmap-grid {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    justify-content: space-between;
+}
+
+.heatmap-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--glass-border);
+}
+
+.heatmap-dot.active {
+    background: var(--primary-green);
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+}
+
+.clickable-card {
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.clickable-card:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 #goalCard {
@@ -590,6 +704,32 @@ video, canvas {
     margin-top: 10px;
 }
 
+/* Streak Modal */
+.streak-modal-content {
+    text-align: center;
+    align-items: center;
+}
+
+.streak-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.streak-header i {
+    font-size: 3rem;
+    color: #ffaa00;
+    margin-bottom: 10px;
+    animation: flicker 2s infinite;
+}
+
+.streak-header h2 {
+    font-size: 4rem;
+    font-family: var(--font-display);
+    color: #fff;
+}
+
 .error-text {
     color: #ff4444;
     font-size: 0.85rem;
@@ -621,6 +761,12 @@ video, canvas {
     0% { transform: scale(1); }
     50% { transform: scale(1.3); }
     100% { transform: scale(1); }
+}
+
+@keyframes flicker {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(0.95); }
+    25%, 75% { opacity: 0.9; transform: scale(1.05); }
 }
 
 /* Responsive */

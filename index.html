@@ -29,6 +29,10 @@
                 <i class="fab fa-google"></i> Login
             </button>
             <div id="userProfile" class="user-profile hidden">
+                <div id="streakContainer" class="streak-badge hidden">
+                    <i class="fas fa-fire"></i>
+                    <span id="streakCount">0</span>
+                </div>
                 <img id="userAvatar" src="" alt="User" class="avatar">
                 <button id="signOutBtn" class="icon-btn" title="Sign Out"><i class="fas fa-sign-out-alt"></i></button>
             </div>
@@ -78,17 +82,23 @@
             <section class="stats-column">
                 
                 <!-- Circular Progress (Session Count) -->
-                <div class="progress-card glass-panel">
-                    <div class="circular-progress-container">
-                        <svg class="progress-ring" width="220" height="220">
-                            <!-- Background Ring -->
-                            <circle class="progress-ring__circle--bg" stroke="rgba(255,255,255,0.05)" stroke-width="12" fill="transparent" r="90" cx="110" cy="110"/>
-                            <!-- Active Progress Ring -->
-                            <circle id="progressRingCircle" class="progress-ring__circle" stroke="#00d2ff" stroke-width="12" fill="transparent" r="90" cx="110" cy="110"/>
+                <div class="progress-card glass-panel ritual-card">
+                    <div class="ritual-ring-container">
+                        <svg class="ritual-ring" width="240" height="240">
+                            <!-- Outer Ring (Night) -->
+                            <circle class="ring-bg" r="100" cx="120" cy="120" stroke-width="12" />
+                            <circle id="ringNight" class="ring-progress night" r="100" cx="120" cy="120" stroke-width="12" />
+                            <!-- Inner Ring (Morning) -->
+                            <circle class="ring-bg" r="75" cx="120" cy="120" stroke-width="12" />
+                            <circle id="ringMorning" class="ring-progress morning" r="75" cx="120" cy="120" stroke-width="12" />
                         </svg>
-                        <div class="progress-text">
-                            <span id="countDisplay" class="count-number">0</span>
-                            <span class="count-label">SESSION</span>
+                        <div class="ring-content">
+                            <span id="dailyTotalDisplay" class="ring-number">0</span>
+                            <span class="ring-label">DAILY QUEST</span>
+                            <div class="session-mini">
+                                <span class="session-label">SESSION:</span>
+                                <span id="sessionCountDisplay">0</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -109,6 +119,11 @@
                             <span id="goalDisplay" class="stat-value">--</span>
                             <button id="goalActionBtn" class="text-btn">Set Goal</button>
                         </div>
+                    </div>
+                    <!-- 7-Day Heatmap -->
+                    <div id="heatmapContainer" class="heatmap-container glass-panel full-width-col clickable-card">
+                        <span class="stat-label">7-Day History</span>
+                        <div id="heatmapGrid" class="heatmap-grid"></div>
                     </div>
                 </div>
 
@@ -173,6 +188,22 @@
                 <button id="cancelGoal" class="btn btn-outline">CANCEL</button>
                 <button id="saveGoal" class="btn btn-primary">SAVE</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Streak Details Modal -->
+    <div id="streakModal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel streak-modal-content">
+            <div class="streak-header">
+                <i class="fas fa-fire"></i>
+                <h2 id="modalStreakCount">0</h2>
+                <span>DAY STREAK</span>
+            </div>
+            <div class="streak-stats">
+                <p>Keep the flame alive by completing 41 prostrations daily.</p>
+                <div id="streakHistoryGrid" class="heatmap-grid large-grid"></div>
+            </div>
+            <button id="closeStreakModal" class="btn btn-primary full-width">CLOSE</button>
         </div>
     </div>
 

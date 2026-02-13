@@ -6,7 +6,7 @@ import {
 
 import { auth, db, googleProvider } from "./firebase_config.js";
 import { signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { doc, setDoc, getDoc, updateDoc, arrayUnion, increment, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { doc, setDoc, getDoc, updateDoc, arrayUnion, increment, collection, addDoc, serverTimestamp, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const video = document.getElementById('webcam');
 const canvas = document.getElementById('output_canvas');
@@ -16,7 +16,6 @@ const toggleSkeletonButton = document.getElementById('toggleSkeletonButton');
 const calibrateButton = document.getElementById('calibrateButton');
 const calibrationSection = document.getElementById('calibrationSection');
 const calibrationStatus = document.getElementById('calibrationStatus');
-const countDisplay = document.getElementById('countDisplay');
 const muteButton = document.getElementById('muteButton');
 const clearButton = document.getElementById('clearButton');
 const resetTotalButton = document.getElementById('resetTotalButton');
@@ -27,7 +26,10 @@ const settingsBackdrop = document.getElementById('settingsBackdrop');
 const totalDisplay = document.getElementById('totalDisplay');
 const goalDisplay = document.getElementById('goalDisplay');
 const goalActionBtn = document.getElementById('goalActionBtn');
-const progressRingCircle = document.getElementById('progressRingCircle');
+const ringMorning = document.getElementById('ringMorning');
+const ringNight = document.getElementById('ringNight');
+const dailyTotalDisplay = document.getElementById('dailyTotalDisplay');
+const sessionCountDisplay = document.getElementById('sessionCountDisplay');
 const successOverlay = document.getElementById('successOverlay');
 const closeSuccess = document.getElementById('closeSuccess');
 const setNewGoalSuccess = document.getElementById('setNewGoalSuccess');
@@ -45,6 +47,14 @@ const loginBtn = document.getElementById('loginBtn');
 const userProfile = document.getElementById('userProfile');
 const userAvatar = document.getElementById('userAvatar');
 const signOutBtn = document.getElementById('signOutBtn');
+const streakContainer = document.getElementById('streakContainer');
+const streakCountDisplay = document.getElementById('streakCount');
+const heatmapGrid = document.getElementById('heatmapGrid');
+const heatmapContainer = document.getElementById('heatmapContainer');
+const streakModal = document.getElementById('streakModal');
+const closeStreakModal = document.getElementById('closeStreakModal');
+const modalStreakCount = document.getElementById('modalStreakCount');
+const streakHistoryGrid = document.getElementById('streakHistoryGrid');
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 let stream = null;
@@ -59,10 +69,9 @@ let downY = 0;
 let thresholdY = 0;
 
 // Counter State
-let totalCount = parseInt(localStorage.getItem('prostrationCount') || '0');
+let totalCount = 0;
 let sessionCount = 0;
 
-countDisplay.innerText = sessionCount;
 totalDisplay.innerText = totalCount;
 
 let isDown = false; // false = UP, true = DOWN
@@ -76,6 +85,13 @@ let successInterval;
 // Firebase State
 let currentUser = null;
 let currentSessionId = null;
+let unsubscribeUserDoc = null;
+
+// Daily Quest State
+let dailyQuest = { morning: 0, night: 0, total: 0, date: "" };
+const QUEST_GOAL = 41;
+const MORNING_GOAL = 20;
+const NIGHT_GOAL = 21;
 
 // Initialize MediaPipe Pose Landmarker
 const createPoseLandmarker = async () => {
@@ -172,7 +188,7 @@ muteButton.addEventListener('click', () => {
 
 clearButton.addEventListener('click', () => {
     sessionCount = 0;
-    countDisplay.innerText = sessionCount;
+    sessionCountDisplay.innerText = sessionCount;
     updateGoalProgress();
     // Resets session only
 });
@@ -180,7 +196,6 @@ clearButton.addEventListener('click', () => {
 resetTotalButton.addEventListener('click', () => {
     if (confirm("Are you sure you want to reset your total count? This cannot be undone.")) {
         totalCount = 0;
-        localStorage.setItem('prostrationCount', '0');
         totalDisplay.innerText = totalCount;
     }
 });
@@ -212,10 +227,11 @@ loginBtn.addEventListener('click', () => {
 signOutBtn.addEventListener('click', () => {
     signOut(auth).then(() => {
         console.log("User signed out");
+        if (unsubscribeUserDoc) unsubscribeUserDoc();
         // Reset session ID so we don't write to closed session
         currentSessionId = null;
-        // Reset total count to local storage fallback
-        totalCount = parseInt(localStorage.getItem('prostrationCount') || '0');
+        // Reset total count
+        totalCount = 0;
         totalDisplay.innerText = totalCount;
     });
 });
@@ -226,15 +242,59 @@ onAuthStateChanged(auth, async (user) => {
         loginBtn.classList.add('hidden');
         userProfile.classList.remove('hidden');
         userAvatar.src = user.photoURL;
+        streakContainer.classList.remove('hidden');
         
         await checkOrCreateUserDoc(user);
         await startFirestoreSession(user.uid);
+        setupRealtimeListener(user.uid);
     } else {
         currentUser = null;
+        if (unsubscribeUserDoc) unsubscribeUserDoc();
         loginBtn.classList.remove('hidden');
         userProfile.classList.add('hidden');
+        streakContainer.classList.add('hidden');
+        // Ensure count is reset on logout/auth loss
+        totalCount = 0;
+        totalDisplay.innerText = totalCount;
     }
 });
+
+function setupRealtimeListener(uid) {
+    const userRef = doc(db, "users", uid);
+    unsubscribeUserDoc = onSnapshot(userRef, (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // Sync Total
+            totalCount = data.totalLifetimeReps || 0;
+            totalDisplay.innerText = totalCount;
+
+            // Sync Streak
+            streakCountDisplay.innerText = data.streakCount || 0;
+
+            // Sync Daily Quest
+            if (data.dailyQuest) {
+                const today = getQuestDate();
+                if (data.dailyQuest.date === today) {
+                    dailyQuest = data.dailyQuest;
+                } else {
+                    // Reset local if date changed (server will update on next write)
+                    dailyQuest = { morning: 0, night: 0, total: 0, date: today };
+                }
+                
+                // Check for Quest Completion (Server-side logic simulation)
+                // We only trigger the modal if it hasn't been shown for this completion yet
+                if (dailyQuest.total >= QUEST_GOAL && data.lastCompletionDate !== today && !document.querySelector('.quest-completed')) {
+                    handleQuestComplete(today);
+                }
+
+                updateRitualRings();
+            }
+
+            updateHeatmap(data.history || []);
+        }
+    });
+}
 
 async function checkOrCreateUserDoc(user) {
     const userRef = doc(db, "users", user.uid);
@@ -262,9 +322,12 @@ async function checkOrCreateUserDoc(user) {
             displayName: user.displayName,
             photoURL: user.photoURL,
             email: user.email,
-            totalLifetimeReps: totalCount, // Sync existing local count if any
+            totalLifetimeReps: 0,
             lastActiveDate: serverTimestamp(),
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
+            streakCount: 0,
+            dailyQuest: { date: getQuestDate(), morning: 0, night: 0, total: 0 },
+            history: []
         });
     }
 }
@@ -292,24 +355,166 @@ function saveCalibrationData() {
     }).catch(e => console.error("Error saving calibration:", e));
 }
 
+// --- Quest Logic ---
+
+function getQuestDate() {
+    const now = new Date();
+    // Day starts at 4:00 AM. If it's 3 AM, it's still yesterday's quest.
+    if (now.getHours() < 4) {
+        now.setDate(now.getDate() - 1);
+    }
+    return now.toISOString().split('T')[0]; // YYYY-MM-DD
+}
+
+function getTimeSlot() {
+    const hour = new Date().getHours();
+    // Morning: 04:00 to 11:59
+    if (hour >= 4 && hour < 12) return 'morning';
+    // Night: 12:00 to 03:59 (next day)
+    return 'night';
+}
+
 function logProstrationEvent() {
     if (!currentUser || !currentSessionId) return;
     
     const sessionRef = doc(db, "sessions", currentSessionId);
     const userRef = doc(db, "users", currentUser.uid);
     const timestamp = new Date(); // Use client time for immediate array push
+    const today = getQuestDate();
+    const slot = getTimeSlot();
 
     // Update Session
     updateDoc(sessionRef, {
         reps: arrayUnion(timestamp)
     }).catch(e => console.error("Error logging rep:", e));
 
-    // Update User Stats
-    updateDoc(userRef, {
+    // Prepare User Update
+    let updateData = {
         totalLifetimeReps: increment(1),
         lastActiveDate: serverTimestamp()
-    }).catch(e => console.error("Error updating user stats:", e));
+    };
+
+    // Handle Daily Quest Logic
+    if (dailyQuest.date !== today) {
+        // New Day Reset
+        updateData.dailyQuest = {
+            date: today,
+            morning: slot === 'morning' ? 1 : 0,
+            night: slot === 'night' ? 1 : 0,
+            total: 1
+        };
+    } else if (dailyQuest.total < QUEST_GOAL) {
+        // Increment existing
+        updateData[`dailyQuest.${slot}`] = increment(1);
+        updateData[`dailyQuest.total`] = increment(1);
+    }
+
+    updateDoc(userRef, updateData).catch(e => console.error("Error updating user stats:", e));
 }
+
+function handleQuestComplete(today) {
+    // Optimistic update to prevent double firing
+    const userRef = doc(db, "users", currentUser.uid);
+    
+    updateDoc(userRef, {
+        streakCount: increment(1),
+        lastCompletionDate: today,
+        history: arrayUnion(today)
+    });
+
+    // Show Reward Modal
+    openStreakModal(true);
+}
+
+function updateRitualRings() {
+    dailyTotalDisplay.innerText = dailyQuest.total;
+
+    // Morning Ring (Inner) - Max 20
+    const mRadius = 75;
+    const mCircumference = 2 * Math.PI * mRadius;
+    const mProgress = Math.min(dailyQuest.morning / MORNING_GOAL, 1);
+    ringMorning.style.strokeDashoffset = mCircumference - (mProgress * mCircumference);
+    
+    // Morning Glow Logic
+    if (dailyQuest.morning >= MORNING_GOAL) {
+        ringMorning.classList.add('glow-complete');
+    } else {
+        ringMorning.classList.remove('glow-complete');
+    }
+
+    // Night Ring (Outer) - Max 21
+    const nRadius = 100;
+    const nCircumference = 2 * Math.PI * nRadius;
+    const nProgress = Math.min(dailyQuest.night / NIGHT_GOAL, 1);
+    ringNight.style.strokeDashoffset = nCircumference - (nProgress * nCircumference);
+
+    // If Total >= 41, fill both completely (Visual Reward)
+    if (dailyQuest.total >= QUEST_GOAL) {
+        ringMorning.style.stroke = "#00ff88"; // Turn green on complete
+        ringNight.style.stroke = "#00ff88";
+        ringMorning.style.strokeDashoffset = 0;
+        ringNight.style.strokeDashoffset = 0;
+        ringNight.classList.add('glow-complete');
+        
+        // If modal is closed, show completed state
+        if (streakModal.classList.contains('hidden')) {
+            document.querySelector('.progress-card').classList.add('quest-completed');
+            dailyTotalDisplay.innerText = "✓";
+        }
+    } else {
+        ringMorning.style.stroke = ""; // Reset to CSS default
+        ringNight.style.stroke = "";
+        ringNight.classList.remove('glow-complete');
+        document.querySelector('.progress-card').classList.remove('quest-completed');
+    }
+}
+
+function updateHeatmap(history, targetGrid = heatmapGrid) {
+    targetGrid.innerHTML = '';
+    // Generate last 7 days
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        if (d.getHours() < 4) d.setDate(d.getDate() - 1); // Adjust for quest day
+        d.setDate(d.getDate() - i);
+        const dateStr = d.toISOString().split('T')[0];
+        
+        const dot = document.createElement('div');
+        dot.className = 'heatmap-dot';
+        if (history.includes(dateStr)) {
+            dot.classList.add('active');
+        }
+        dot.title = dateStr;
+        targetGrid.appendChild(dot);
+    }
+}
+
+// Streak Modal Logic
+function openStreakModal(isReward = false) {
+    streakModal.classList.remove('hidden');
+    modalStreakCount.innerText = streakCountDisplay.innerText;
+    
+    // Populate history in modal
+    // We need to fetch history again or store it globally. 
+    // For now, we rely on the listener to have populated the main grid, 
+    // but let's just clone the main grid content for simplicity or re-render if we had the data.
+    // Better: Re-render using the data we have in memory if possible, or just copy HTML.
+    streakHistoryGrid.innerHTML = heatmapGrid.innerHTML;
+
+    if (isReward) {
+        playChurchBell();
+        triggerCelebration();
+    }
+}
+
+heatmapContainer.addEventListener('click', () => {
+    openStreakModal(false);
+});
+
+closeStreakModal.addEventListener('click', () => {
+    streakModal.classList.add('hidden');
+    // If quest is complete, update UI to "Completed" state
+    updateRitualRings();
+});
 
 // Goal Modal Logic
 goalActionBtn.addEventListener('click', () => {
@@ -449,7 +654,6 @@ calibrateButton.addEventListener('click', () => {
         thresholdY = upY + (downY - upY) * 0.7;
         
         sessionCount = 0;
-        countDisplay.innerText = sessionCount;
         updateGoalProgress();
         
         calibrationStep = 0;
@@ -490,6 +694,12 @@ function playFanfare() {
     audio.play().catch(e => console.error("Error playing audio:", e));
 }
 
+function playChurchBell() {
+    if (isMuted) return;
+    const audio = new Audio('Assets/church_bell.mp3'); // Ensure this file exists
+    audio.play().catch(e => console.warn("Church bell audio missing"));
+}
+
 function playBeep() {
     if (isMuted) return;
     const oscillator = audioCtx.createOscillator();
@@ -527,20 +737,6 @@ async function predictWebcam() {
                     drawingUtils.drawLandmarks(landmarks, { radius: 4 });
                 }
 
-                // Update Progress Ring
-                if (thresholdY > 0) {
-                    // Calculate progress (0 at upY, 1 at downY)
-                    let progress = (smoothedNoseY - upY) / (downY - upY);
-                    // Clamp between 0 and 1
-                    progress = Math.max(0, Math.min(1, progress));
-                    
-                    // Update SVG Stroke Offset
-                    const radius = progressRingCircle.r.baseVal.value;
-                    const circumference = radius * 2 * Math.PI;
-                    const offset = circumference - (progress * circumference);
-                    progressRingCircle.style.strokeDashoffset = offset;
-                }
-
                 // Counting Logic
                 if (thresholdY > 0) {
                     const nose = landmarks[0];
@@ -569,15 +765,14 @@ async function predictWebcam() {
                             
                             sessionCount++;
                             totalCount++;
-                            localStorage.setItem('prostrationCount', totalCount);
+                            sessionCountDisplay.innerText = sessionCount;
                             
-                            countDisplay.innerText = sessionCount;
                             totalDisplay.innerText = totalCount;
                             updateGoalProgress();
                             
                             // Pulse Animation
-                            countDisplay.classList.add('pulse-anim');
-                            setTimeout(() => countDisplay.classList.remove('pulse-anim'), 300);
+                            dailyTotalDisplay.classList.add('pulse-anim');
+                            setTimeout(() => dailyTotalDisplay.classList.remove('pulse-anim'), 300);
 
                             playBeep();
                             speakCount(sessionCount);
