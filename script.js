@@ -24,6 +24,7 @@ const closeSettings = document.getElementById('closeSettings');
 const settingsBackdrop = document.getElementById('settingsBackdrop');
 const totalDisplay = document.getElementById('totalDisplay');
 const goalDisplay = document.getElementById('goalDisplay');
+const goalCard = document.getElementById('goalCard');
 const progressRingCircle = document.getElementById('progressRingCircle');
 const successOverlay = document.getElementById('successOverlay');
 const closeSuccess = document.getElementById('closeSuccess');
@@ -173,6 +174,12 @@ setGoalButton.addEventListener('click', () => {
     }
 });
 
+goalCard.addEventListener('click', () => {
+    settingsPanel.classList.remove('hidden');
+    settingsBackdrop.classList.remove('hidden');
+    goalInput.focus();
+});
+
 // Settings UI Handlers
 function toggleSettings() {
     settingsPanel.classList.toggle('hidden');
@@ -200,9 +207,7 @@ function speakCount(number) {
 
 function playSuccessSound() {
     if (isMuted) return;
-    // For simplicity, we will use an alert as the primary notification
-    // and re-use the beep sound.
-    playBeep();
+    playFanfare();
 }
 
 calibrateButton.addEventListener('click', () => {
@@ -264,6 +269,12 @@ function triggerCelebration() {
         colors: colors,
         zIndex: 1001
     });
+}
+
+function playFanfare() {
+    if (isMuted) return;
+    const audio = new Audio('Assets/uppbeat-io.mp3');
+    audio.play().catch(e => console.error("Error playing audio:", e));
 }
 
 function playBeep() {

@@ -344,6 +344,16 @@ video, canvas {
     font-family: var(--font-display);
 }
 
+#goalCard {
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+#goalCard:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary-blue);
+}
+
 /* Settings Sidebar */
 .settings-backdrop {
     position: fixed;
