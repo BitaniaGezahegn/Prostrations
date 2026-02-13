@@ -830,12 +830,42 @@ video, canvas {
     .dashboard-grid {
         grid-template-columns: 1fr;
     }
-    
-    .stats-column {
-        flex-direction: column-reverse;
-    }
-    
+
     .settings-sidebar {
         width: 85%;
+    }
+
+    /* Nav Responsiveness */
+    .glass-nav {
+        padding: 0.8rem 1rem;
+    }
+
+    .brand {
+        font-size: 1.2rem;
+    }
+
+    .user-controls {
+        gap: 8px;
+        margin-right: 5px;
+    }
+    
+    .streak-badge {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .brand > span {
+        display: none;
+    }
+    .brand i {
+        font-size: 1.5rem;
+        color: var(--primary-blue);
+    }
+    #loginBtn span {
+        display: none;
+    }
+    #loginBtn {
+        padding: 8px;
     }
 }
