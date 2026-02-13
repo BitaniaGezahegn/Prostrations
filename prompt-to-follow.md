@@ -41,3 +41,15 @@ Please implement this project following these exact stages. Pause after each sta
 
 # Deliverable
 Start by proposing a file structure and then provide the code for Stage 1.
+
+----------------------
+Great, the core counter is working. Now, let's add three specific enhancements to the existing code without changing the primary logic:
+
+1. **Smoothing (EMA):** Apply an Exponential Moving Average to the nose Y-coordinate (alpha = 0.2) to stop the "jitter" and make the tracking more stable.
+2. **Voice Announcements:** Use the `window.speechSynthesis` API to have the app speak the count aloud (e.g., "One", "Two") every time the counter increments. 
+3. **Session Persistence:** Save the session's total count to `localStorage` so that if I refresh the page, the number doesn't reset to zero.
+4. **UI Toggle:** Add a button to "Hide Skeleton" that stops drawing the lines on the canvas but keeps the tracking running in the background for a cleaner look.
+
+Please provide only the updated JavaScript functions and the new UI buttons needed to integrate these.
+
+----------------------

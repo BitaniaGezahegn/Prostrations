@@ -8,6 +8,7 @@ const video = document.getElementById('webcam');
 const canvas = document.getElementById('output_canvas');
 const canvasCtx = canvas.getContext('2d');
 const webcamButton = document.getElementById('webcamButton');
+const toggleSkeletonButton = document.getElementById('toggleSkeletonButton');
 const calibrateButton = document.getElementById('calibrateButton');
 const calibrationSection = document.getElementById('calibrationSection');
 const calibrationStatus = document.getElementById('calibrationStatus');
@@ -27,9 +28,12 @@ let downY = 0;
 let thresholdY = 0;
 
 // Counter State
-let count = 0;
+let count = parseInt(localStorage.getItem('prostrationCount') || '0');
+countDisplay.innerText = count;
 let isDown = false; // false = UP, true = DOWN
 let lastStateChangeTime = 0;
+let smoothedNoseY = null;
+let showSkeleton = true;
 
 // Initialize MediaPipe Pose Landmarker
 const createPoseLandmarker = async () => {
@@ -114,6 +118,18 @@ function stopCamera() {
     calibrationSection.classList.add('hidden');
 }
 
+toggleSkeletonButton.addEventListener('click', () => {
+    showSkeleton = !showSkeleton;
+    toggleSkeletonButton.innerText = showSkeleton ? "HIDE SKELETON" : "SHOW SKELETON";
+});
+
+function speakCount(number) {
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(number.toString());
+        window.speechSynthesis.speak(utterance);
+    }
+}
+
 calibrateButton.addEventListener('click', () => {
     if (!currentPose) {
         alert("No pose detected. Please stand in front of the camera.");
@@ -142,6 +158,7 @@ calibrateButton.addEventListener('click', () => {
         thresholdY = upY + (downY - upY) * 0.7;
         
         count = 0;
+        localStorage.setItem('prostrationCount', count);
         countDisplay.innerText = count;
         calibrationStep = 0;
         calibrateButton.innerText = "RECALIBRATE";
@@ -179,35 +196,49 @@ async function predictWebcam() {
         if (results.landmarks && results.landmarks.length > 0) {
             for (const landmarks of results.landmarks) {
                 currentPose = landmarks;
-                drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS);
-                drawingUtils.drawLandmarks(landmarks, { radius: 4 });
+                
+                if (showSkeleton) {
+                    drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS);
+                    drawingUtils.drawLandmarks(landmarks, { radius: 4 });
+                }
 
                 // Counting Logic
                 if (thresholdY > 0) {
                     const nose = landmarks[0];
+                    
+                    // EMA Smoothing (Alpha = 0.2)
+                    if (smoothedNoseY === null) {
+                        smoothedNoseY = nose.y;
+                    } else {
+                        smoothedNoseY = 0.2 * nose.y + 0.8 * smoothedNoseY;
+                    }
+
                     const now = performance.now();
                     const DEBOUNCE_DELAY = 300; // ms
 
-                    if (!isDown && nose.y > thresholdY) {
+                    if (!isDown && smoothedNoseY > thresholdY) {
                         // Transition UP -> DOWN
                         if (now - lastStateChangeTime > DEBOUNCE_DELAY) {
                             isDown = true;
                             lastStateChangeTime = now;
                         }
-                    } else if (isDown && nose.y < thresholdY) {
+                    } else if (isDown && smoothedNoseY < thresholdY) {
                         // Transition DOWN -> UP (Complete Rep)
                         if (now - lastStateChangeTime > DEBOUNCE_DELAY) {
                             isDown = false;
                             lastStateChangeTime = now;
                             count++;
+                            localStorage.setItem('prostrationCount', count);
                             countDisplay.innerText = count;
                             playBeep();
+                            speakCount(count);
                         }
                     }
                 }
             }
         } else {
             currentPose = null;
+            smoothedNoseY = null;
         }
         canvasCtx.restore();
     }
