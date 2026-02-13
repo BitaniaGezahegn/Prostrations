@@ -93,6 +93,7 @@ let dailyQuest = { morning: 0, night: 0, total: 0, date: "" };
 const QUEST_GOAL = 41;
 const MORNING_GOAL = 20;
 const NIGHT_GOAL = 21;
+let userHistory = [];
 
 // Initialize MediaPipe Pose Landmarker
 const createPoseLandmarker = async () => {
@@ -269,6 +270,7 @@ function setupRealtimeListener(uid) {
             // Sync Total
             totalCount = data.totalLifetimeReps || 0;
             totalDisplay.innerText = totalCount;
+            userHistory = data.history || [];
 
             // Sync Streak
             streakCountDisplay.innerText = data.streakCount || 0;
@@ -292,7 +294,7 @@ function setupRealtimeListener(uid) {
                 updateRitualRings();
             }
 
-            updateHeatmap(data.history || []);
+            updateHeatmap(userHistory);
         }
     });
 }
@@ -405,8 +407,16 @@ function logProstrationEvent() {
             total: 1
         };
     } else if (dailyQuest.total < QUEST_GOAL) {
-        // Increment existing
-        updateData[`dailyQuest.${slot}`] = increment(1);
+        let targetSlot = slot;
+        
+        // Spillover Logic: If current slot is full, fill the other one
+        if (slot === 'night' && dailyQuest.night >= NIGHT_GOAL) {
+            targetSlot = 'morning';
+        } else if (slot === 'morning' && dailyQuest.morning >= MORNING_GOAL) {
+            targetSlot = 'night';
+        }
+
+        updateData[`dailyQuest.${targetSlot}`] = increment(1);
         updateData[`dailyQuest.total`] = increment(1);
     }
 
@@ -415,6 +425,10 @@ function logProstrationEvent() {
 
 function handleQuestComplete(today) {
     // Optimistic update to prevent double firing
+    const currentStreak = parseInt(streakCountDisplay.innerText) || 0;
+    const newStreak = currentStreak + 1;
+    streakCountDisplay.innerText = newStreak;
+
     const userRef = doc(db, "users", currentUser.uid);
     
     updateDoc(userRef, {
@@ -422,6 +436,11 @@ function handleQuestComplete(today) {
         lastCompletionDate: today,
         history: arrayUnion(today)
     });
+
+    // Optimistically add today to history so it lights up in the modal immediately
+    if (!userHistory.includes(today)) {
+        userHistory.push(today);
+    }
 
     // Show Reward Modal
     openStreakModal(true);
@@ -471,8 +490,8 @@ function updateRitualRings() {
 
 function updateHeatmap(history, targetGrid = heatmapGrid) {
     targetGrid.innerHTML = '';
-    // Generate last 7 days
-    for (let i = 6; i >= 0; i--) {
+    // Generate last 7 days. i=0 is Today (Left), i=6 is 6 days ago (Right)
+    for (let i = 0; i < 7; i++) {
         const d = new Date();
         if (d.getHours() < 4) d.setDate(d.getDate() - 1); // Adjust for quest day
         d.setDate(d.getDate() - i);
@@ -482,6 +501,7 @@ function updateHeatmap(history, targetGrid = heatmapGrid) {
         dot.className = 'heatmap-dot';
         if (history.includes(dateStr)) {
             dot.classList.add('active');
+            dot.innerHTML = '<i class="fas fa-fire"></i>';
         }
         dot.title = dateStr;
         targetGrid.appendChild(dot);
@@ -493,15 +513,12 @@ function openStreakModal(isReward = false) {
     streakModal.classList.remove('hidden');
     modalStreakCount.innerText = streakCountDisplay.innerText;
     
-    // Populate history in modal
-    // We need to fetch history again or store it globally. 
-    // For now, we rely on the listener to have populated the main grid, 
-    // but let's just clone the main grid content for simplicity or re-render if we had the data.
-    // Better: Re-render using the data we have in memory if possible, or just copy HTML.
-    streakHistoryGrid.innerHTML = heatmapGrid.innerHTML;
+    // Render history in modal using global data
+    updateHeatmap(userHistory, streakHistoryGrid);
 
     if (isReward) {
         playChurchBell();
+        playFanfare();
         triggerCelebration();
     }
 }

@@ -372,12 +372,13 @@ video, canvas {
 }
 
 .ritual-card.completed-hidden {
-    max-height: 0;
-    padding: 0;
-    margin: 0;
-    opacity: 0;
-    border: none;
-    pointer-events: none;
+    max-height: 80px;
+    padding: 0 20px;
+    opacity: 1;
+    border: 1px solid var(--primary-green);
+    background: rgba(0, 255, 136, 0.05);
+    pointer-events: auto;
+    cursor: default;
 }
 
 .ritual-ring-container {
@@ -387,6 +388,28 @@ video, canvas {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.ritual-card.completed-hidden .ritual-ring-container {
+    display: none;
+}
+
+.quest-complete-message {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    height: 100%;
+    color: var(--primary-green);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.2rem;
+    letter-spacing: 1px;
+}
+
+.ritual-card.completed-hidden .quest-complete-message {
+    display: flex;
 }
 
 .ritual-ring {
@@ -529,11 +552,18 @@ video, canvas {
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: transparent;
 }
 
 .heatmap-dot.active {
-    background: var(--primary-green);
-    box-shadow: 0 0 10px rgba(0, 255, 136, 0.4);
+    background: #ffaa00;
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.6);
+    border-color: #ffaa00;
+    color: #fff;
 }
 
 .clickable-card {
