@@ -3,28 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prostration Counter</title>
+    <title>Prostration Counter | Pro</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        <h1>Prostration Counter</h1>
-        
-        <div class="video-wrapper">
-            <video id="webcam" autoplay playsinline></video>
-            <canvas id="output_canvas"></canvas>
-            <div id="countDisplay">0</div>
-        </div>
+    <!-- Ambient Background -->
+    <div class="ambient-glow"></div>
 
-        <div class="controls">
-            <button id="webcamButton" class="btn">ENABLE WEBCAM</button>
-            <button id="toggleSkeletonButton" class="btn">HIDE SKELETON</button>
-            <div id="calibrationSection" class="hidden">
-                <p id="calibrationStatus">Status: Uncalibrated</p>
-                <button id="calibrateButton" class="btn">CALIBRATE</button>
+    <!-- Navigation Bar -->
+    <nav class="glass-nav">
+        <div class="brand">
+            <i class="fas fa-pray"></i>
+            <span>Sujud<span class="highlight">Counter</span></span>
+        </div>
+        <button id="settingsToggle" class="icon-btn" aria-label="Settings">
+            <i class="fas fa-cog"></i>
+        </button>
+    </nav>
+
+    <div class="app-container">
+        <main class="dashboard-grid">
+            
+            <!-- Video Feed Section -->
+            <section class="video-card glass-panel">
+                <div class="video-wrapper">
+                    <video id="webcam" autoplay playsinline></video>
+                    <canvas id="output_canvas"></canvas>
+                    
+                    <!-- HUD Overlay -->
+                    <div class="hud-layer">
+                        <div class="live-badge"><span class="pulse-dot"></span> LIVE FEED</div>
+                        <div id="calibrationOverlay" class="calibration-status">
+                            <i class="fas fa-ruler-combined"></i>
+                            <span id="calibrationStatus">Uncalibrated</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Primary Actions -->
+                <div class="primary-actions">
+                    <button id="webcamButton" class="btn btn-primary">
+                        <i class="fas fa-camera"></i> START CAMERA
+                    </button>
+                    <button id="calibrateButton" class="btn btn-accent hidden">
+                        <i class="fas fa-crosshairs"></i> CALIBRATE
+                    </button>
+                </div>
+            </section>
+
+            <!-- Stats & Progress Section -->
+            <section class="stats-column">
+                
+                <!-- Circular Progress (Session Count) -->
+                <div class="progress-card glass-panel">
+                    <div class="circular-progress-container">
+                        <svg class="progress-ring" width="220" height="220">
+                            <!-- Background Ring -->
+                            <circle class="progress-ring__circle--bg" stroke="rgba(255,255,255,0.05)" stroke-width="12" fill="transparent" r="90" cx="110" cy="110"/>
+                            <!-- Active Progress Ring -->
+                            <circle id="progressRingCircle" class="progress-ring__circle" stroke="#00d2ff" stroke-width="12" fill="transparent" r="90" cx="110" cy="110"/>
+                        </svg>
+                        <div class="progress-text">
+                            <span id="countDisplay" class="count-number">0</span>
+                            <span class="count-label">SESSION</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secondary Stats Grid -->
+                <div class="stats-row">
+                    <div class="stat-card glass-panel">
+                        <div class="stat-icon"><i class="fas fa-history"></i></div>
+                        <div class="stat-data">
+                            <span class="stat-label">Total</span>
+                            <span id="totalDisplay" class="stat-value">0</span>
+                        </div>
+                    </div>
+                    <div class="stat-card glass-panel">
+                        <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
+                        <div class="stat-data">
+                            <span class="stat-label">Goal</span>
+                            <span id="goalDisplay" class="stat-value">--</span>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+    <!-- Settings Sidebar -->
+    <div id="settingsBackdrop" class="settings-backdrop hidden"></div>
+    <aside id="settingsPanel" class="settings-sidebar">
+        <div class="sidebar-header">
+            <h3>Control Panel</h3>
+            <button id="closeSettings" class="icon-btn"><i class="fas fa-times"></i></button>
+        </div>
+        
+        <div class="sidebar-content">
+            <div class="setting-group">
+                <label>Visuals</label>
+                <button id="toggleSkeletonButton" class="btn btn-outline full-width">HIDE SKELETON</button>
+            </div>
+
+            <div class="setting-group">
+                <label>Audio</label>
+                <button id="muteButton" class="btn btn-outline full-width">MUTE SOUND</button>
+            </div>
+
+            <div class="setting-group">
+                <label>Session Data</label>
+                <button id="clearButton" class="btn btn-outline full-width">CLEAR SESSION</button>
+                <button id="resetTotalButton" class="btn btn-danger full-width">RESET TOTAL HISTORY</button>
+            </div>
+
+            <div class="setting-group">
+                <label>Target Goal</label>
+                <div class="input-row">
+                    <input type="number" id="goalInput" placeholder="e.g. 33">
+                    <button id="setGoalButton" class="btn btn-accent">SET</button>
+                </div>
+            </div>
+            
+            <div class="calibration-instructions">
+                <h4><i class="fas fa-info-circle"></i> Calibration Guide</h4>
+                <p>1. Ensure camera is on.</p>
+                <p>2. Sit upright and click <strong>Calibrate</strong>.</p>
+                <p>3. Perform one Sujud (head down) and click again.</p>
             </div>
         </div>
+    </aside>
+
+    <!-- Success Overlay -->
+    <div id="successOverlay" class="success-overlay hidden">
+        <div class="success-content">
+            <i class="fas fa-check-circle"></i>
+            <h2>Goal Reached!</h2>
+            <p>Alhamdulillah, you completed your session.</p>
+            <button id="closeSuccess" class="btn btn-primary">CONTINUE</button>
+        </div>
     </div>
+
     <script type="module" src="script.js"></script>
 </body>
 </html>

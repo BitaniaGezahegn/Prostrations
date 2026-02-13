@@ -53,3 +53,37 @@ Great, the core counter is working. Now, let's add three specific enhancements t
 Please provide only the updated JavaScript functions and the new UI buttons needed to integrate these.
 
 ----------------------
+
+# Role
+You are a High-End Frontend UI/UX Designer and CSS Expert.
+
+# Objective
+Perform a complete visual overhaul of the Prostration Counter. Transform it from a basic utility into a premium, modern, gamified dashboard.
+
+# Visual Requirements
+1. **Glassmorphism Aesthetic:** Use a dark, sleek background with semi-transparent "glass" cards for controls and stats. Use a color palette of Deep Charcoal (#121212), Electric Blue (#00d2ff), and Emerald Green (#00ff88).
+2. **The "Live View" Container:** - Add a subtle neon glow to the video feed.
+   - Overlay the canvas perfectly so the "skeleton" looks like a high-tech HUD.
+3. **Circular Progress Indicator:**
+   - Create a large, beautiful circular progress ring (SVG/CSS) in the center or side.
+   - This ring should fill up dynamically based on the current Y-coordinate relative to the 'Up' and 'Down' thresholds.
+4. **Gamified Stat Cards:**
+   - Create 3 distinct cards: [Current Session], [Daily Total], and [Target Goal].
+   - Use modern typography (e.g., 'Inter' or 'Poppins') and icons (you can use FontAwesome or simple SVG icons).
+5. **Animation Effects:**
+   - Add a "Pulse" animation to the counter number every time it increments.
+   - Add a "Success" flash or confetti effect when the Goal is reached.
+6. **Responsive Layout:**
+   - Use CSS Grid/Flexbox to ensure the camera feed is large on desktop but stacks nicely on mobile.
+   - Hide the "Control Panel" behind a sleek "Settings" gear icon or a sliding sidebar to keep the main view clean.
+
+# Technical Instructions
+- Use Modern CSS (Variables, Flexbox, Grid, and Backdrop-filter).
+- Keep the existing MediaPipe and State Machine logic intact, but wrap it in this new UI structure.
+- Ensure the UI doesn't lag the camera processing (use GPU-accelerated CSS transitions).
+
+# Deliverable
+Provide the complete updated HTML and CSS files. For the JavaScript, show me how to link the new UI elements (like the progress ring) to the existing coordinate logic.
+
+----------------------
+

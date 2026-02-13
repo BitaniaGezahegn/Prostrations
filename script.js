@@ -13,6 +13,20 @@ const calibrateButton = document.getElementById('calibrateButton');
 const calibrationSection = document.getElementById('calibrationSection');
 const calibrationStatus = document.getElementById('calibrationStatus');
 const countDisplay = document.getElementById('countDisplay');
+const muteButton = document.getElementById('muteButton');
+const clearButton = document.getElementById('clearButton');
+const resetTotalButton = document.getElementById('resetTotalButton');
+const goalInput = document.getElementById('goalInput');
+const setGoalButton = document.getElementById('setGoalButton');
+const settingsToggle = document.getElementById('settingsToggle');
+const settingsPanel = document.getElementById('settingsPanel');
+const closeSettings = document.getElementById('closeSettings');
+const settingsBackdrop = document.getElementById('settingsBackdrop');
+const totalDisplay = document.getElementById('totalDisplay');
+const goalDisplay = document.getElementById('goalDisplay');
+const progressRingCircle = document.getElementById('progressRingCircle');
+const successOverlay = document.getElementById('successOverlay');
+const closeSuccess = document.getElementById('closeSuccess');
 const drawingUtils = new DrawingUtils(canvasCtx);
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -28,12 +42,18 @@ let downY = 0;
 let thresholdY = 0;
 
 // Counter State
-let count = parseInt(localStorage.getItem('prostrationCount') || '0');
-countDisplay.innerText = count;
+let totalCount = parseInt(localStorage.getItem('prostrationCount') || '0');
+let sessionCount = 0;
+
+countDisplay.innerText = sessionCount;
+totalDisplay.innerText = totalCount;
+
 let isDown = false; // false = UP, true = DOWN
 let lastStateChangeTime = 0;
 let smoothedNoseY = null;
 let showSkeleton = true;
+let isMuted = false;
+let targetGoal = 0;
 
 // Initialize MediaPipe Pose Landmarker
 const createPoseLandmarker = async () => {
@@ -76,7 +96,7 @@ function toggleCamera() {
     }
     if (stream) {
         stopCamera();
-        calibrationSection.classList.add('hidden');
+        calibrateButton.classList.add('hidden');
     } else {
         startCamera();
     }
@@ -100,7 +120,7 @@ function startCamera() {
         video.addEventListener('loadedmetadata', () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            calibrationSection.classList.remove('hidden');
+            calibrateButton.classList.remove('hidden');
             predictWebcam();
         });
     }).catch((err) => {
@@ -115,7 +135,7 @@ function stopCamera() {
     stream = null;
     video.srcObject = null;
     webcamButton.innerText = 'ENABLE WEBCAM';
-    calibrationSection.classList.add('hidden');
+    calibrateButton.classList.add('hidden');
 }
 
 toggleSkeletonButton.addEventListener('click', () => {
@@ -123,11 +143,66 @@ toggleSkeletonButton.addEventListener('click', () => {
     toggleSkeletonButton.innerText = showSkeleton ? "HIDE SKELETON" : "SHOW SKELETON";
 });
 
+muteButton.addEventListener('click', () => {
+    isMuted = !isMuted;
+    muteButton.innerText = isMuted ? "UNMUTE" : "MUTE";
+});
+
+clearButton.addEventListener('click', () => {
+    sessionCount = 0;
+    countDisplay.innerText = sessionCount;
+    // Resets session only
+});
+
+resetTotalButton.addEventListener('click', () => {
+    if (confirm("Are you sure you want to reset your total count? This cannot be undone.")) {
+        totalCount = 0;
+        localStorage.setItem('prostrationCount', '0');
+        totalDisplay.innerText = totalCount;
+    }
+});
+
+setGoalButton.addEventListener('click', () => {
+    const goalValue = parseInt(goalInput.value, 10);
+    if (goalValue > 0) {
+        targetGoal = goalValue;
+        goalDisplay.innerText = targetGoal;
+        goalInput.value = ''; // Clear input
+    } else {
+        alert('Please enter a valid goal number greater than 0.');
+    }
+});
+
+// Settings UI Handlers
+function toggleSettings() {
+    settingsPanel.classList.toggle('hidden');
+    settingsBackdrop.classList.toggle('hidden');
+}
+
+settingsToggle.addEventListener('click', toggleSettings);
+closeSettings.addEventListener('click', toggleSettings);
+settingsBackdrop.addEventListener('click', toggleSettings);
+
+closeSuccess.addEventListener('click', () => {
+    successOverlay.classList.add('hidden');
+    // Reset goal to prevent loop
+    targetGoal = 0;
+    goalDisplay.innerText = "--";
+});
+
 function speakCount(number) {
+    if (isMuted) return;
     if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(number.toString());
         window.speechSynthesis.speak(utterance);
     }
+}
+
+function playSuccessSound() {
+    if (isMuted) return;
+    // For simplicity, we will use an alert as the primary notification
+    // and re-use the beep sound.
+    playBeep();
 }
 
 calibrateButton.addEventListener('click', () => {
@@ -147,7 +222,7 @@ calibrateButton.addEventListener('click', () => {
         // Record UP position
         upY = nose.y;
         calibrationStep = 2;
-        calibrateButton.innerText = "SET DOWN POSITION";
+        calibrateButton.innerText = "SET DOWN POS";
         calibrationStatus.innerText = "Step 2: Perform Sujud (Prostrate), then click button.";
     } else if (calibrationStep === 2) {
         // Record DOWN position
@@ -157,16 +232,18 @@ calibrateButton.addEventListener('click', () => {
         // Note: In MediaPipe, Y increases downwards (0 is top, 1 is bottom)
         thresholdY = upY + (downY - upY) * 0.7;
         
-        count = 0;
-        localStorage.setItem('prostrationCount', count);
-        countDisplay.innerText = count;
+        sessionCount = 0;
+        countDisplay.innerText = sessionCount;
+        
         calibrationStep = 0;
         calibrateButton.innerText = "RECALIBRATE";
-        calibrationStatus.innerText = `Calibrated! (Thresh: ${thresholdY.toFixed(2)})`;
+        calibrationStatus.innerText = `Calibrated`;
+        calibrationStatus.style.color = "#00ff88";
     }
 });
 
 function playBeep() {
+    if (isMuted) return;
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
 
@@ -202,6 +279,20 @@ async function predictWebcam() {
                     drawingUtils.drawLandmarks(landmarks, { radius: 4 });
                 }
 
+                // Update Progress Ring
+                if (thresholdY > 0) {
+                    // Calculate progress (0 at upY, 1 at downY)
+                    let progress = (smoothedNoseY - upY) / (downY - upY);
+                    // Clamp between 0 and 1
+                    progress = Math.max(0, Math.min(1, progress));
+                    
+                    // Update SVG Stroke Offset
+                    const radius = progressRingCircle.r.baseVal.value;
+                    const circumference = radius * 2 * Math.PI;
+                    const offset = circumference - (progress * circumference);
+                    progressRingCircle.style.strokeDashoffset = offset;
+                }
+
                 // Counting Logic
                 if (thresholdY > 0) {
                     const nose = landmarks[0];
@@ -227,11 +318,26 @@ async function predictWebcam() {
                         if (now - lastStateChangeTime > DEBOUNCE_DELAY) {
                             isDown = false;
                             lastStateChangeTime = now;
-                            count++;
-                            localStorage.setItem('prostrationCount', count);
-                            countDisplay.innerText = count;
+                            
+                            sessionCount++;
+                            totalCount++;
+                            localStorage.setItem('prostrationCount', totalCount);
+                            
+                            countDisplay.innerText = sessionCount;
+                            totalDisplay.innerText = totalCount;
+                            
+                            // Pulse Animation
+                            countDisplay.classList.add('pulse-anim');
+                            setTimeout(() => countDisplay.classList.remove('pulse-anim'), 300);
+
                             playBeep();
-                            speakCount(count);
+                            speakCount(sessionCount);
+
+                            // Goal Check
+                            if (targetGoal > 0 && sessionCount === targetGoal) {
+                                playSuccessSound();
+                                successOverlay.classList.remove('hidden');
+                            }
                         }
                     }
                 }
