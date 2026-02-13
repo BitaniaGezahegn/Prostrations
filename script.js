@@ -29,6 +29,7 @@ const goalActionBtn = document.getElementById('goalActionBtn');
 const ringMorning = document.getElementById('ringMorning');
 const ringNight = document.getElementById('ringNight');
 const dailyTotalDisplay = document.getElementById('dailyTotalDisplay');
+const dailyQuestCard = document.getElementById('dailyQuestCard');
 const sessionCountDisplay = document.getElementById('sessionCountDisplay');
 const successOverlay = document.getElementById('successOverlay');
 const closeSuccess = document.getElementById('closeSuccess');
@@ -427,7 +428,7 @@ function handleQuestComplete(today) {
 }
 
 function updateRitualRings() {
-    dailyTotalDisplay.innerText = dailyQuest.total;
+    dailyTotalDisplay.innerText = `${dailyQuest.total} / ${QUEST_GOAL}`;
 
     // Morning Ring (Inner) - Max 20
     const mRadius = 75;
@@ -458,14 +459,13 @@ function updateRitualRings() {
         
         // If modal is closed, show completed state
         if (streakModal.classList.contains('hidden')) {
-            document.querySelector('.progress-card').classList.add('quest-completed');
-            dailyTotalDisplay.innerText = "✓";
+            dailyQuestCard.classList.add('completed-hidden');
         }
     } else {
         ringMorning.style.stroke = ""; // Reset to CSS default
         ringNight.style.stroke = "";
         ringNight.classList.remove('glow-complete');
-        document.querySelector('.progress-card').classList.remove('quest-completed');
+        dailyQuestCard.classList.remove('completed-hidden');
     }
 }
 
@@ -771,8 +771,8 @@ async function predictWebcam() {
                             updateGoalProgress();
                             
                             // Pulse Animation
-                            dailyTotalDisplay.classList.add('pulse-anim');
-                            setTimeout(() => dailyTotalDisplay.classList.remove('pulse-anim'), 300);
+                            sessionCountDisplay.classList.add('pulse-anim');
+                            setTimeout(() => sessionCountDisplay.classList.remove('pulse-anim'), 300);
 
                             playBeep();
                             speakCount(sessionCount);

@@ -81,8 +81,14 @@
             <!-- Stats & Progress Section -->
             <section class="stats-column">
                 
-                <!-- Circular Progress (Session Count) -->
-                <div class="progress-card glass-panel ritual-card">
+                <!-- NEW: Big Session Counter -->
+                <div class="counter-card glass-panel">
+                    <span class="counter-label">SESSION REPS</span>
+                    <span id="sessionCountDisplay" class="big-count">0</span>
+                </div>
+
+                <!-- Circular Progress (Daily Quest) -->
+                <div id="dailyQuestCard" class="progress-card glass-panel ritual-card">
                     <div class="ritual-ring-container">
                         <svg class="ritual-ring" width="240" height="240">
                             <!-- Outer Ring (Night) -->
@@ -93,12 +99,8 @@
                             <circle id="ringMorning" class="ring-progress morning" r="75" cx="120" cy="120" stroke-width="12" />
                         </svg>
                         <div class="ring-content">
-                            <span id="dailyTotalDisplay" class="ring-number">0</span>
+                            <span id="dailyTotalDisplay" class="ring-subtext">0 / 41</span>
                             <span class="ring-label">DAILY QUEST</span>
-                            <div class="session-mini">
-                                <span class="session-label">SESSION:</span>
-                                <span id="sessionCountDisplay">0</span>
-                            </div>
                         </div>
                     </div>
                 </div>

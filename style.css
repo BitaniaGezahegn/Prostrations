@@ -330,6 +330,32 @@ video, canvas {
     gap: 25px;
 }
 
+.counter-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    text-align: center;
+}
+
+.counter-label {
+    font-size: 1rem;
+    color: var(--text-muted);
+    letter-spacing: 2px;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.big-count {
+    font-family: var(--font-display);
+    font-size: 6rem;
+    font-weight: 700;
+    color: var(--primary-blue);
+    line-height: 1;
+    text-shadow: 0 0 20px rgba(0, 210, 255, 0.3);
+}
+
 .progress-card {
     display: flex;
     justify-content: center;
@@ -339,6 +365,19 @@ video, canvas {
 
 .ritual-card {
     padding: 20px;
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    max-height: 400px;
+    opacity: 1;
+    overflow: hidden;
+}
+
+.ritual-card.completed-hidden {
+    max-height: 0;
+    padding: 0;
+    margin: 0;
+    opacity: 0;
+    border: none;
+    pointer-events: none;
 }
 
 .ritual-ring-container {
@@ -399,25 +438,12 @@ video, canvas {
     align-items: center;
 }
 
-.ring-number {
+.ring-subtext {
     font-family: var(--font-display);
-    font-size: 3.5rem;
+    font-size: 1.5rem;
     font-weight: 700;
     color: var(--text-main);
-    line-height: 1;
-}
-
-/* Session Mini Sensor */
-.session-mini {
-    margin-top: 10px;
-    background: rgba(255, 255, 255, 0.1);
-    padding: 4px 12px;
-    border-radius: 12px;
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    font-size: 0.9rem;
-    border: 1px solid var(--glass-border);
+    margin-bottom: 5px;
 }
 
 .session-label {
