@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="style.css">
     <!-- Confetti Library -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <!-- Ambient Background -->
@@ -130,6 +132,13 @@
                     <div id="heatmapContainer" class="heatmap-container glass-panel full-width-col clickable-card">
                         <span class="stat-label">7-Day History</span>
                         <div id="heatmapGrid" class="heatmap-grid"></div>
+                    </div>
+                    <!-- Weekly Chart -->
+                    <div class="chart-card glass-panel full-width-col">
+                        <span class="stat-label">Weekly Activity</span>
+                        <div class="chart-wrapper">
+                            <canvas id="weeklyChart"></canvas>
+                        </div>
                     </div>
                 </div>
 

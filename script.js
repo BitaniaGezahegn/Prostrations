@@ -57,6 +57,7 @@ const streakModal = document.getElementById('streakModal');
 const closeStreakModal = document.getElementById('closeStreakModal');
 const modalStreakCount = document.getElementById('modalStreakCount');
 const streakHistoryGrid = document.getElementById('streakHistoryGrid');
+const weeklyChartCanvas = document.getElementById('weeklyChart');
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 let stream = null;
@@ -95,6 +96,7 @@ const QUEST_GOAL = 41;
 const MORNING_GOAL = 20;
 const NIGHT_GOAL = 21;
 let userHistory = [];
+let weeklyChartInstance = null;
 
 // Initialize MediaPipe Pose Landmarker
 const createPoseLandmarker = async () => {
@@ -236,6 +238,12 @@ signOutBtn.addEventListener('click', () => {
         // Reset total count
         totalCount = 0;
         totalDisplay.innerText = totalCount;
+
+        // Clear Chart
+        if (weeklyChartInstance) {
+            weeklyChartInstance.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0];
+            weeklyChartInstance.update();
+        }
     });
 });
 
@@ -296,6 +304,7 @@ function setupRealtimeListener(uid) {
             }
 
             updateHeatmap(userHistory);
+            updateChart(data.dailyCounts || {});
         }
     });
 }
@@ -320,6 +329,10 @@ async function checkOrCreateUserDoc(user) {
             calibrationStatus.style.color = "#00ff88";
             calibrateButton.innerText = "RECALIBRATE";
         }
+        // Ensure dailyCounts exists (migration for existing users)
+        if (!data.dailyCounts) {
+            await updateDoc(userRef, { dailyCounts: {} });
+        }
     } else {
         // Create new user profile
         await setDoc(userRef, {
@@ -331,7 +344,8 @@ async function checkOrCreateUserDoc(user) {
             createdAt: serverTimestamp(),
             streakCount: 0,
             dailyQuest: { date: getQuestDate(), morning: 0, night: 0, total: 0 },
-            history: []
+            history: [],
+            dailyCounts: {}
         });
     }
 }
@@ -361,13 +375,20 @@ function saveCalibrationData() {
 
 // --- Quest Logic ---
 
-function getQuestDate() {
-    const now = new Date();
-    // Day starts at 4:00 AM. If it's 3 AM, it's still yesterday's quest.
-    if (now.getHours() < 4) {
-        now.setDate(now.getDate() - 1);
+function getLocalQuestDateString(dateObj = new Date()) {
+    const d = new Date(dateObj);
+    // Day starts at 4:00 AM
+    if (d.getHours() < 4) {
+        d.setDate(d.getDate() - 1);
     }
-    return now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getQuestDate() {
+    return getLocalQuestDateString();
 }
 
 function getTimeSlot() {
@@ -395,7 +416,8 @@ function logProstrationEvent() {
     // Prepare User Update
     let updateData = {
         totalLifetimeReps: increment(1),
-        lastActiveDate: serverTimestamp()
+        lastActiveDate: serverTimestamp(),
+        [`dailyCounts.${today}`]: increment(1)
     };
 
     // Handle Daily Quest Logic
@@ -506,6 +528,78 @@ function updateHeatmap(history, targetGrid = heatmapGrid) {
         }
         dot.title = dateStr;
         targetGrid.appendChild(dot);
+    }
+}
+
+function updateChart(dailyCounts) {
+    if (!weeklyChartCanvas) return;
+
+    const labels = [];
+    const dataPoints = [];
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    // Determine "Today's" Quest Date Object
+    const todayQuestDate = new Date();
+    if (todayQuestDate.getHours() < 4) {
+        todayQuestDate.setDate(todayQuestDate.getDate() - 1);
+    }
+
+    // Generate last 7 days
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date(todayQuestDate);
+        d.setDate(d.getDate() - i);
+        
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+        
+        labels.push(days[d.getDay()]);
+        dataPoints.push(dailyCounts[dateStr] || 0);
+    }
+
+    if (weeklyChartInstance) {
+        weeklyChartInstance.data.labels = labels;
+        weeklyChartInstance.data.datasets[0].data = dataPoints;
+        weeklyChartInstance.update();
+    } else {
+        weeklyChartInstance = new Chart(weeklyChartCanvas, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Reps',
+                    data: dataPoints,
+                    backgroundColor: (context) => {
+                        const ctx = context.chart.ctx;
+                        const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+                        gradient.addColorStop(0, 'rgba(0, 210, 255, 0.4)');
+                        gradient.addColorStop(1, 'rgba(0, 210, 255, 0.0)');
+                        return gradient;
+                    },
+                    borderColor: '#00d2ff',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#121212',
+                    pointBorderColor: '#00d2ff',
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, 
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
+                        ticks: { color: '#a0a0a0', precision: 0 } },
+                    x: { grid: { display: false }, 
+                        ticks: { color: '#a0a0a0' } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
     }
 }
 
