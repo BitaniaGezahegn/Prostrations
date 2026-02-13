@@ -21,7 +21,7 @@ body {
     font-family: var(--font-main);
     background-color: var(--bg-color);
     color: var(--text-main);
-    min-height: 100vh;
+    min-height: 100dvh;
     overflow-x: hidden;
 }
 
@@ -78,6 +78,29 @@ body {
 .icon-btn:hover {
     background: var(--glass-border);
     color: var(--primary-blue);
+}
+
+/* User Profile */
+.user-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-left: auto; /* Push to right */
+    margin-right: 15px;
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--primary-blue);
+    object-fit: cover;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 /* Layout */
@@ -230,6 +253,11 @@ video, canvas {
     display: flex;
     align-items: center;
     gap: 8px;
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.85rem;
 }
 
 .btn-primary {
@@ -449,7 +477,10 @@ video, canvas {
 }
 
 .setting-group {
+    display: flex;
+    flex-direction: column;
     margin-bottom: 20px;
+    gap: 20px;
 }
 
 .setting-group label {
@@ -509,6 +540,13 @@ video, canvas {
 .success-content h2 {
     font-size: 2rem;
     margin-bottom: 10px;
+}
+
+.success-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 20px;
 }
 
 /* Goal Modal */

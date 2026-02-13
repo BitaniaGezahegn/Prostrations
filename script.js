@@ -4,6 +4,10 @@ import {
     DrawingUtils
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
 
+import { auth, db, googleProvider } from "./firebase_config.js";
+import { signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { doc, setDoc, getDoc, updateDoc, arrayUnion, increment, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
 const video = document.getElementById('webcam');
 const canvas = document.getElementById('output_canvas');
 const canvasCtx = canvas.getContext('2d');
@@ -26,6 +30,7 @@ const goalActionBtn = document.getElementById('goalActionBtn');
 const progressRingCircle = document.getElementById('progressRingCircle');
 const successOverlay = document.getElementById('successOverlay');
 const closeSuccess = document.getElementById('closeSuccess');
+const setNewGoalSuccess = document.getElementById('setNewGoalSuccess');
 const goalModal = document.getElementById('goalModal');
 const modalGoalInput = document.getElementById('modalGoalInput');
 const saveGoalBtn = document.getElementById('saveGoal');
@@ -36,6 +41,10 @@ const goalProgressBarContainer = document.getElementById('goalProgressBarContain
 const goalProgressBarFill = document.getElementById('goalProgressBarFill');
 const goalProgressText = document.getElementById('goalProgressText');
 const drawingUtils = new DrawingUtils(canvasCtx);
+const loginBtn = document.getElementById('loginBtn');
+const userProfile = document.getElementById('userProfile');
+const userAvatar = document.getElementById('userAvatar');
+const signOutBtn = document.getElementById('signOutBtn');
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 let stream = null;
@@ -62,6 +71,11 @@ let smoothedNoseY = null;
 let showSkeleton = true;
 let isMuted = false;
 let targetGoal = 0;
+let successInterval;
+
+// Firebase State
+let currentUser = null;
+let currentSessionId = null;
 
 // Initialize MediaPipe Pose Landmarker
 const createPoseLandmarker = async () => {
@@ -171,6 +185,132 @@ resetTotalButton.addEventListener('click', () => {
     }
 });
 
+// --- Firebase Auth & Logic ---
+
+loginBtn.addEventListener('click', () => {
+    // Proactive check: Redirect 127.0.0.1 to localhost to avoid auth domain errors
+    if (window.location.hostname === '127.0.0.1') {
+        if (confirm("Google Login works better on 'localhost'. Switch to localhost now?")) {
+            window.location.href = window.location.href.replace('127.0.0.1', 'localhost');
+            return;
+        }
+    }
+
+    signInWithPopup(auth, googleProvider)
+        .catch((error) => {
+            console.error("Login failed:", error);
+            if (error.code === 'auth/unauthorized-domain') {
+                alert("Firebase Error: Domain not authorized.\n\nPlease add '127.0.0.1' to the Authorized Domains in your Firebase Console (Authentication > Settings).");
+            } else if (error.code === 'auth/popup-closed-by-user') {
+                // User closed the popup, no alert needed
+            } else {
+                alert(`Login failed: ${error.message}`);
+            }
+        });
+});
+
+signOutBtn.addEventListener('click', () => {
+    signOut(auth).then(() => {
+        console.log("User signed out");
+        // Reset session ID so we don't write to closed session
+        currentSessionId = null;
+        // Reset total count to local storage fallback
+        totalCount = parseInt(localStorage.getItem('prostrationCount') || '0');
+        totalDisplay.innerText = totalCount;
+    });
+});
+
+onAuthStateChanged(auth, async (user) => {
+    if (user) {
+        currentUser = user;
+        loginBtn.classList.add('hidden');
+        userProfile.classList.remove('hidden');
+        userAvatar.src = user.photoURL;
+        
+        await checkOrCreateUserDoc(user);
+        await startFirestoreSession(user.uid);
+    } else {
+        currentUser = null;
+        loginBtn.classList.remove('hidden');
+        userProfile.classList.add('hidden');
+    }
+});
+
+async function checkOrCreateUserDoc(user) {
+    const userRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+        const data = userSnap.data();
+        // Sync Total Reps
+        totalCount = data.totalLifetimeReps || 0;
+        totalDisplay.innerText = totalCount;
+        
+        // Sync Calibration if exists
+        if (data.calibrationData) {
+            upY = data.calibrationData.upY;
+            downY = data.calibrationData.downY;
+            thresholdY = upY + (downY - upY) * 0.7;
+            
+            calibrationStatus.innerText = "Calibrated (Loaded from Profile)";
+            calibrationStatus.style.color = "#00ff88";
+            calibrateButton.innerText = "RECALIBRATE";
+        }
+    } else {
+        // Create new user profile
+        await setDoc(userRef, {
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            email: user.email,
+            totalLifetimeReps: totalCount, // Sync existing local count if any
+            lastActiveDate: serverTimestamp(),
+            createdAt: serverTimestamp()
+        });
+    }
+}
+
+async function startFirestoreSession(uid) {
+    try {
+        const sessionRef = await addDoc(collection(db, "sessions"), {
+            userId: uid,
+            startTime: serverTimestamp(),
+            reps: []
+        });
+        currentSessionId = sessionRef.id;
+        console.log("Session started:", currentSessionId);
+    } catch (e) {
+        console.error("Error starting session:", e);
+    }
+}
+
+function saveCalibrationData() {
+    if (!currentUser) return;
+    const userRef = doc(db, "users", currentUser.uid);
+    // Fire and forget
+    updateDoc(userRef, {
+        calibrationData: { upY, downY }
+    }).catch(e => console.error("Error saving calibration:", e));
+}
+
+function logProstrationEvent() {
+    if (!currentUser || !currentSessionId) return;
+    
+    const sessionRef = doc(db, "sessions", currentSessionId);
+    const userRef = doc(db, "users", currentUser.uid);
+    const timestamp = new Date(); // Use client time for immediate array push
+
+    // Update Session
+    updateDoc(sessionRef, {
+        reps: arrayUnion(timestamp)
+    }).catch(e => console.error("Error logging rep:", e));
+
+    // Update User Stats
+    updateDoc(userRef, {
+        totalLifetimeReps: increment(1),
+        lastActiveDate: serverTimestamp()
+    }).catch(e => console.error("Error updating user stats:", e));
+}
+
 // Goal Modal Logic
 goalActionBtn.addEventListener('click', () => {
     goalModal.classList.remove('hidden');
@@ -214,13 +354,28 @@ settingsToggle.addEventListener('click', toggleSettings);
 closeSettings.addEventListener('click', toggleSettings);
 settingsBackdrop.addEventListener('click', toggleSettings);
 
-closeSuccess.addEventListener('click', () => {
+function dismissSuccessOverlay() {
+    clearInterval(successInterval);
     successOverlay.classList.add('hidden');
     // Reset goal to prevent loop
     targetGoal = 0;
     goalDisplay.innerText = "--";
     goalActionBtn.innerText = "Set Goal";
     updateGoalProgress();
+    closeSuccess.innerText = "CONTINUE";
+}
+
+closeSuccess.addEventListener('click', dismissSuccessOverlay);
+
+setNewGoalSuccess.addEventListener('click', () => {
+    dismissSuccessOverlay();
+    
+    // Open Goal Modal
+    goalModal.classList.remove('hidden');
+    modalGoalInput.value = '';
+    modalGoalInput.focus();
+    goalError.classList.add('hidden');
+    currentSessionRef.innerText = sessionCount;
 });
 
 function speakCount(number) {
@@ -246,6 +401,24 @@ function updateGoalProgress() {
 function playSuccessSound() {
     if (isMuted) return;
     playFanfare();
+}
+
+function handleGoalReached() {
+    playSuccessSound();
+    triggerCelebration();
+    successOverlay.classList.remove('hidden');
+    
+    let seconds = 5;
+    closeSuccess.innerText = `CONTINUE (${seconds})`;
+    
+    clearInterval(successInterval);
+    successInterval = setInterval(() => {
+        seconds--;
+        closeSuccess.innerText = `CONTINUE (${seconds})`;
+        if (seconds <= 0) {
+            dismissSuccessOverlay();
+        }
+    }, 1000);
 }
 
 calibrateButton.addEventListener('click', () => {
@@ -283,6 +456,7 @@ calibrateButton.addEventListener('click', () => {
         calibrateButton.innerText = "RECALIBRATE";
         calibrationStatus.innerText = `Calibrated`;
         calibrationStatus.style.color = "#00ff88";
+        saveCalibrationData(); // Save to Firestore
     }
 });
 
@@ -407,12 +581,11 @@ async function predictWebcam() {
 
                             playBeep();
                             speakCount(sessionCount);
+                            logProstrationEvent(); // Log to Firestore
 
                             // Goal Check
                             if (targetGoal > 0 && sessionCount === targetGoal) {
-                                playSuccessSound();
-                                triggerCelebration();
-                                successOverlay.classList.remove('hidden');
+                                handleGoalReached();
                             }
                         }
                     }
