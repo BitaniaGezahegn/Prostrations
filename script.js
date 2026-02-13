@@ -242,6 +242,30 @@ calibrateButton.addEventListener('click', () => {
     }
 });
 
+function triggerCelebration() {
+    const colors = ['#FFD700', '#FFFFFF', '#00d2ff']; // Gold, White, Electric Blue
+    
+    // Fire from left
+    confetti({
+        particleCount: 100,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0, y: 0.7 },
+        colors: colors,
+        zIndex: 1001
+    });
+    
+    // Fire from right
+    confetti({
+        particleCount: 100,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1, y: 0.7 },
+        colors: colors,
+        zIndex: 1001
+    });
+}
+
 function playBeep() {
     if (isMuted) return;
     const oscillator = audioCtx.createOscillator();
@@ -336,6 +360,7 @@ async function predictWebcam() {
                             // Goal Check
                             if (targetGoal > 0 && sessionCount === targetGoal) {
                                 playSuccessSound();
+                                triggerCelebration();
                                 successOverlay.classList.remove('hidden');
                             }
                         }
