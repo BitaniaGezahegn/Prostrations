@@ -79,3 +79,11 @@ video, canvas {
     text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
     z-index: 10;
 }
+
+@media (max-width: 480px) {
+    #countDisplay {
+        font-size: 2.5rem;
+        right: 15px;
+        top: 15px;
+    }
+}

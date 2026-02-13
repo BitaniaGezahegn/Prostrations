@@ -13,6 +13,7 @@ const calibrationSection = document.getElementById('calibrationSection');
 const calibrationStatus = document.getElementById('calibrationStatus');
 const countDisplay = document.getElementById('countDisplay');
 const drawingUtils = new DrawingUtils(canvasCtx);
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 let stream = null;
 let poseLandmarker = undefined;
@@ -66,6 +67,9 @@ if (hasGetUserMedia()) {
 }
 
 function toggleCamera() {
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+    }
     if (stream) {
         stopCamera();
         calibrationSection.classList.add('hidden');
@@ -145,6 +149,20 @@ calibrateButton.addEventListener('click', () => {
     }
 });
 
+function playBeep() {
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.start();
+    gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.1);
+    oscillator.stop(audioCtx.currentTime + 0.1);
+}
+
 async function predictWebcam() {
     // If stream is null, stop the loop
     if (!stream) return;
@@ -183,6 +201,7 @@ async function predictWebcam() {
                             lastStateChangeTime = now;
                             count++;
                             countDisplay.innerText = count;
+                            playBeep();
                         }
                     }
                 }
