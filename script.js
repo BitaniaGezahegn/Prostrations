@@ -16,18 +16,22 @@ const countDisplay = document.getElementById('countDisplay');
 const muteButton = document.getElementById('muteButton');
 const clearButton = document.getElementById('clearButton');
 const resetTotalButton = document.getElementById('resetTotalButton');
-const goalInput = document.getElementById('goalInput');
-const setGoalButton = document.getElementById('setGoalButton');
 const settingsToggle = document.getElementById('settingsToggle');
 const settingsPanel = document.getElementById('settingsPanel');
 const closeSettings = document.getElementById('closeSettings');
 const settingsBackdrop = document.getElementById('settingsBackdrop');
 const totalDisplay = document.getElementById('totalDisplay');
 const goalDisplay = document.getElementById('goalDisplay');
-const goalCard = document.getElementById('goalCard');
+const goalActionBtn = document.getElementById('goalActionBtn');
 const progressRingCircle = document.getElementById('progressRingCircle');
 const successOverlay = document.getElementById('successOverlay');
 const closeSuccess = document.getElementById('closeSuccess');
+const goalModal = document.getElementById('goalModal');
+const modalGoalInput = document.getElementById('modalGoalInput');
+const saveGoalBtn = document.getElementById('saveGoal');
+const cancelGoalBtn = document.getElementById('cancelGoal');
+const goalError = document.getElementById('goalError');
+const currentSessionRef = document.getElementById('currentSessionRef');
 const drawingUtils = new DrawingUtils(canvasCtx);
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -163,21 +167,36 @@ resetTotalButton.addEventListener('click', () => {
     }
 });
 
-setGoalButton.addEventListener('click', () => {
-    const goalValue = parseInt(goalInput.value, 10);
-    if (goalValue > 0) {
-        targetGoal = goalValue;
-        goalDisplay.innerText = targetGoal;
-        goalInput.value = ''; // Clear input
-    } else {
-        alert('Please enter a valid goal number greater than 0.');
-    }
+// Goal Modal Logic
+goalActionBtn.addEventListener('click', () => {
+    goalModal.classList.remove('hidden');
+    modalGoalInput.value = targetGoal > 0 ? targetGoal : '';
+    modalGoalInput.focus();
+    goalError.classList.add('hidden');
+    currentSessionRef.innerText = sessionCount;
 });
 
-goalCard.addEventListener('click', () => {
-    settingsPanel.classList.remove('hidden');
-    settingsBackdrop.classList.remove('hidden');
-    goalInput.focus();
+cancelGoalBtn.addEventListener('click', () => {
+    goalModal.classList.add('hidden');
+});
+
+saveGoalBtn.addEventListener('click', () => {
+    const goalValue = parseInt(modalGoalInput.value, 10);
+    
+    if (isNaN(goalValue) || goalValue <= 0) {
+        alert('Please enter a valid number greater than 0.');
+        return;
+    }
+
+    if (goalValue <= sessionCount) {
+        goalError.classList.remove('hidden');
+        currentSessionRef.innerText = sessionCount;
+    } else {
+        targetGoal = goalValue;
+        goalDisplay.innerText = targetGoal;
+        goalActionBtn.innerText = "Edit Goal";
+        goalModal.classList.add('hidden');
+    }
 });
 
 // Settings UI Handlers
@@ -195,6 +214,7 @@ closeSuccess.addEventListener('click', () => {
     // Reset goal to prevent loop
     targetGoal = 0;
     goalDisplay.innerText = "--";
+    goalActionBtn.innerText = "Set Goal";
 });
 
 function speakCount(number) {

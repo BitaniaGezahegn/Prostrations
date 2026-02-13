@@ -92,6 +92,7 @@
                         <div class="stat-data">
                             <span class="stat-label">Goal</span>
                             <span id="goalDisplay" class="stat-value">--</span>
+                            <button id="goalActionBtn" class="text-btn">Set Goal</button>
                         </div>
                     </div>
                 </div>
@@ -125,14 +126,6 @@
                 <button id="resetTotalButton" class="btn btn-danger full-width">RESET TOTAL HISTORY</button>
             </div>
 
-            <div class="setting-group">
-                <label>Target Goal</label>
-                <div class="input-row">
-                    <input type="number" id="goalInput" placeholder="e.g. 33">
-                    <button id="setGoalButton" class="btn btn-accent">SET</button>
-                </div>
-            </div>
-            
             <div class="calibration-instructions">
                 <h4><i class="fas fa-info-circle"></i> Calibration Guide</h4>
                 <p>1. Ensure camera is on.</p>
@@ -149,6 +142,19 @@
             <h2>Goal Reached!</h2>
             <p>Praise God, you completed your session.</p>
             <button id="closeSuccess" class="btn btn-primary">CONTINUE</button>
+        </div>
+    </div>
+
+    <!-- Goal Setting Modal -->
+    <div id="goalModal" class="modal-overlay hidden">
+        <div class="modal-content glass-panel">
+            <h3>Set Target Goal</h3>
+            <input type="number" id="modalGoalInput" class="modal-input" placeholder="Enter number...">
+            <p id="goalError" class="error-text hidden">Goal must be greater than current session (<span id="currentSessionRef">0</span>).</p>
+            <div class="modal-actions">
+                <button id="cancelGoal" class="btn btn-outline">CANCEL</button>
+                <button id="saveGoal" class="btn btn-primary">SAVE</button>
+            </div>
         </div>
     </div>
 
