@@ -1,9 +1,35 @@
+import {
+    PoseLandmarker,
+    FilesetResolver,
+    DrawingUtils
+} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
+
 const video = document.getElementById('webcam');
 const canvas = document.getElementById('output_canvas');
 const canvasCtx = canvas.getContext('2d');
 const webcamButton = document.getElementById('webcamButton');
+const drawingUtils = new DrawingUtils(canvasCtx);
 
 let stream = null;
+let poseLandmarker = undefined;
+let lastVideoTime = -1;
+
+// Initialize MediaPipe Pose Landmarker
+const createPoseLandmarker = async () => {
+    const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+    );
+    poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+            modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`,
+            delegate: "CPU"
+        },
+        runningMode: "LIVE_STREAM",
+        numPoses: 1
+    });
+    console.log("PoseLandmarker loaded");
+};
+createPoseLandmarker();
 
 // Check if browser supports getUserMedia
 function hasGetUserMedia() {
@@ -49,6 +75,7 @@ function startCamera() {
         video.addEventListener('loadedmetadata', () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
+            predictWebcam();
         });
     }).catch((err) => {
         console.error('Error accessing camera:', err);
@@ -62,4 +89,29 @@ function stopCamera() {
     stream = null;
     video.srcObject = null;
     webcamButton.innerText = 'ENABLE WEBCAM';
+}
+
+async function predictWebcam() {
+    // If stream is null, stop the loop
+    if (!stream) return;
+
+    if (poseLandmarker && video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        const startTimeMs = performance.now();
+        
+        const results = poseLandmarker.detectForVideo(video, startTimeMs);
+
+        canvasCtx.save();
+        canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        if (results.landmarks) {
+            for (const landmarks of results.landmarks) {
+                drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS);
+                drawingUtils.drawLandmarks(landmarks, { radius: 4 });
+            }
+        }
+        canvasCtx.restore();
+    }
+
+    window.requestAnimationFrame(predictWebcam);
 }
