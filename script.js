@@ -23,6 +23,7 @@ const settingsToggle = document.getElementById('settingsToggle');
 const settingsPanel = document.getElementById('settingsPanel');
 const closeSettings = document.getElementById('closeSettings');
 const settingsBackdrop = document.getElementById('settingsBackdrop');
+const themeToggleBtn = document.getElementById('themeToggleBtn');
 const totalDisplay = document.getElementById('totalDisplay');
 const goalDisplay = document.getElementById('goalDisplay');
 const goalActionBtn = document.getElementById('goalActionBtn');
@@ -575,6 +576,12 @@ function toggleSettings() {
 settingsToggle.addEventListener('click', toggleSettings);
 closeSettings.addEventListener('click', toggleSettings);
 settingsBackdrop.addEventListener('click', toggleSettings);
+
+themeToggleBtn.addEventListener('click', () => {
+    document.body.classList.toggle('light-mode');
+    const isLight = document.body.classList.contains('light-mode');
+    themeToggleBtn.innerText = isLight ? "SWITCH TO DARK MODE" : "SWITCH TO DAY MODE";
+});
 
 function dismissSuccessOverlay() {
     clearInterval(successInterval);

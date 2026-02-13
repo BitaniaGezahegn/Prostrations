@@ -9,6 +9,10 @@
     --font-main: 'Inter', sans-serif;
     --font-display: 'Poppins', sans-serif;
     --sidebar-width: 300px;
+    --nav-bg: rgba(18, 18, 18, 0.8);
+    --sidebar-bg: #1a1a1a;
+    --modal-bg: #1a1a1a;
+    --input-bg: rgba(0, 0, 0, 0.3);
 }
 
 * {
@@ -23,6 +27,24 @@ body {
     color: var(--text-main);
     min-height: 100dvh;
     overflow-x: hidden;
+}
+
+body.light-mode {
+    --bg-color: #f0f2f5;
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --text-main: #1a1a1a;
+    --text-muted: #555555;
+    --nav-bg: rgba(255, 255, 255, 0.9);
+    --sidebar-bg: #ffffff;
+    --modal-bg: #ffffff;
+    --input-bg: rgba(0, 0, 0, 0.05);
+    --primary-green: #00aa55; /* Darker for visibility on light bg */
+    --primary-blue: #0088cc;
+}
+
+body.light-mode .ambient-glow {
+    background: radial-gradient(circle at 50% 50%, rgba(0, 210, 255, 0.15), transparent 60%);
 }
 
 /* Ambient Background */
@@ -43,7 +65,7 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 1rem 2rem;
-    background: rgba(18, 18, 18, 0.8);
+    background: var(--nav-bg);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--glass-border);
     position: sticky;
@@ -513,7 +535,7 @@ video, canvas {
 .stat-icon {
     width: 40px;
     height: 40px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--glass-bg);
     border-radius: 10px;
     display: flex;
     align-items: center;
@@ -550,7 +572,7 @@ video, canvas {
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--glass-border);
     border: 1px solid var(--glass-border);
     display: flex;
     align-items: center;
@@ -617,7 +639,7 @@ video, canvas {
     right: 0;
     width: var(--sidebar-width);
     height: 100%;
-    background: #1a1a1a;
+    background: var(--sidebar-bg);
     border-left: 1px solid var(--glass-border);
     z-index: 200;
     padding: 20px;
@@ -693,7 +715,7 @@ video, canvas {
 
 .success-content {
     text-align: center;
-    background: #1e1e1e;
+    background: var(--modal-bg);
     padding: 40px;
     border-radius: 20px;
     border: 1px solid var(--primary-green);
@@ -737,7 +759,7 @@ video, canvas {
 .modal-content {
     width: 90%;
     max-width: 400px;
-    background: #1a1a1a;
+    background: var(--modal-bg);
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -745,9 +767,9 @@ video, canvas {
 
 .modal-input {
     width: 100%;
-    background: rgba(0, 0, 0, 0.3);
+    background: var(--input-bg);
     border: 1px solid var(--glass-border);
-    color: white;
+    color: var(--text-main);
     padding: 12px;
     border-radius: 8px;
     font-size: 1.1rem;
