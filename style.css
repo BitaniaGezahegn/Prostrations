@@ -58,3 +58,13 @@ video, canvas {
 .btn:hover {
     background-color: #0056b3;
 }
+
+.hidden {
+    display: none;
+}
+
+#calibrationStatus {
+    margin: 10px 0;
+    font-weight: bold;
+    color: #555;
+}

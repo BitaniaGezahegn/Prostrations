@@ -8,11 +8,21 @@ const video = document.getElementById('webcam');
 const canvas = document.getElementById('output_canvas');
 const canvasCtx = canvas.getContext('2d');
 const webcamButton = document.getElementById('webcamButton');
+const calibrateButton = document.getElementById('calibrateButton');
+const calibrationSection = document.getElementById('calibrationSection');
+const calibrationStatus = document.getElementById('calibrationStatus');
 const drawingUtils = new DrawingUtils(canvasCtx);
 
 let stream = null;
 let poseLandmarker = undefined;
 let lastVideoTime = -1;
+let currentPose = null;
+
+// Calibration State
+let calibrationStep = 0; // 0: Idle, 1: Set Up, 2: Set Down
+let upY = 0;
+let downY = 0;
+let thresholdY = 0;
 
 // Initialize MediaPipe Pose Landmarker
 const createPoseLandmarker = async () => {
@@ -52,6 +62,7 @@ if (hasGetUserMedia()) {
 function toggleCamera() {
     if (stream) {
         stopCamera();
+        calibrationSection.classList.add('hidden');
     } else {
         startCamera();
     }
@@ -75,6 +86,7 @@ function startCamera() {
         video.addEventListener('loadedmetadata', () => {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
+            calibrationSection.classList.remove('hidden');
             predictWebcam();
         });
     }).catch((err) => {
@@ -89,7 +101,41 @@ function stopCamera() {
     stream = null;
     video.srcObject = null;
     webcamButton.innerText = 'ENABLE WEBCAM';
+    calibrationSection.classList.add('hidden');
 }
+
+calibrateButton.addEventListener('click', () => {
+    if (!currentPose) {
+        alert("No pose detected. Please stand in front of the camera.");
+        return;
+    }
+
+    const nose = currentPose[0]; // Landmark 0 is the nose
+
+    if (calibrationStep === 0) {
+        // Start Calibration
+        calibrationStep = 1;
+        calibrateButton.innerText = "SET UP POSITION";
+        calibrationStatus.innerText = "Step 1: Sit/Stand upright, then click button.";
+    } else if (calibrationStep === 1) {
+        // Record UP position
+        upY = nose.y;
+        calibrationStep = 2;
+        calibrateButton.innerText = "SET DOWN POSITION";
+        calibrationStatus.innerText = "Step 2: Perform Sujud (Prostrate), then click button.";
+    } else if (calibrationStep === 2) {
+        // Record DOWN position
+        downY = nose.y;
+        
+        // Calculate Threshold (70% of the way down)
+        // Note: In MediaPipe, Y increases downwards (0 is top, 1 is bottom)
+        thresholdY = upY + (downY - upY) * 0.7;
+        
+        calibrationStep = 0;
+        calibrateButton.innerText = "RECALIBRATE";
+        calibrationStatus.innerText = `Calibrated! (Thresh: ${thresholdY.toFixed(2)})`;
+    }
+});
 
 async function predictWebcam() {
     // If stream is null, stop the loop
@@ -104,11 +150,14 @@ async function predictWebcam() {
         canvasCtx.save();
         canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
         
-        if (results.landmarks) {
+        if (results.landmarks && results.landmarks.length > 0) {
             for (const landmarks of results.landmarks) {
+                currentPose = landmarks;
                 drawingUtils.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS);
                 drawingUtils.drawLandmarks(landmarks, { radius: 4 });
             }
+        } else {
+            currentPose = null;
         }
         canvasCtx.restore();
     }
