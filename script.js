@@ -217,6 +217,9 @@ loginBtn.addEventListener('click', () => {
     }
 
     signInWithPopup(auth, googleProvider)
+        .then(() => {
+            window.location.reload();
+        })
         .catch((error) => {
             console.error("Login failed:", error);
             if (error.code === 'auth/unauthorized-domain') {
@@ -231,19 +234,7 @@ loginBtn.addEventListener('click', () => {
 
 signOutBtn.addEventListener('click', () => {
     signOut(auth).then(() => {
-        console.log("User signed out");
-        if (unsubscribeUserDoc) unsubscribeUserDoc();
-        // Reset session ID so we don't write to closed session
-        currentSessionId = null;
-        // Reset total count
-        totalCount = 0;
-        totalDisplay.innerText = totalCount;
-
-        // Clear Chart
-        if (weeklyChartInstance) {
-            weeklyChartInstance.data.datasets[0].data = [0, 0, 0, 0, 0, 0, 0];
-            weeklyChartInstance.update();
-        }
+        window.location.reload();
     });
 });
 
@@ -421,14 +412,19 @@ function logProstrationEvent() {
     };
 
     // Handle Daily Quest Logic
-    if (dailyQuest.date !== today) {
-        // New Day Reset
-        updateData.dailyQuest = {
+    if (dailyQuest.date !== today || dailyQuest.total === 0) {
+        // New Day Reset OR First Rep of Day (ensures date is synced)
+        const newQuestState = {
             date: today,
             morning: slot === 'morning' ? 1 : 0,
             night: slot === 'night' ? 1 : 0,
             total: 1
         };
+        updateData.dailyQuest = newQuestState;
+
+        // OPTIMISTIC UPDATE: Update local state immediately to prevent race conditions
+        dailyQuest = newQuestState;
+        updateRitualRings();
     } else if (dailyQuest.total < QUEST_GOAL) {
         let targetSlot = slot;
         
@@ -441,6 +437,11 @@ function logProstrationEvent() {
 
         updateData[`dailyQuest.${targetSlot}`] = increment(1);
         updateData[`dailyQuest.total`] = increment(1);
+
+        // OPTIMISTIC UPDATE
+        dailyQuest[targetSlot]++;
+        dailyQuest.total++;
+        updateRitualRings();
     }
 
     updateDoc(userRef, updateData).catch(e => console.error("Error updating user stats:", e));
