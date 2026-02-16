@@ -79,6 +79,9 @@ totalDisplay.innerText = totalCount;
 
 let isDown = false; // false = UP, true = DOWN
 let lastStateChangeTime = 0;
+let lastCountTime = 0;
+const MIN_CYCLE_TIME = 1500;
+let yHistory = [];
 let smoothedNoseY = null;
 let showSkeleton = true;
 let isMuted = false;
@@ -859,47 +862,69 @@ async function predictWebcam() {
                 // Counting Logic
                 if (thresholdY > 0) {
                     const nose = landmarks[0];
-                    
-                    // EMA Smoothing (Alpha = 0.2)
-                    if (smoothedNoseY === null) {
-                        smoothedNoseY = nose.y;
+                    const leftShoulder = landmarks[11];
+                    const rightShoulder = landmarks[12];
+
+                    // 1. Coordinate Smoothing (Centroid)
+                    // Calculate stableY based on Nose and Shoulders
+                    let stableY = 0;
+                    const noseConf = nose.visibility !== undefined ? nose.visibility : 1.0;
+
+                    if (noseConf < 0.5) {
+                        // Nose unreliable, use shoulders
+                        stableY = (leftShoulder.y + rightShoulder.y) / 2;
                     } else {
-                        smoothedNoseY = 0.2 * nose.y + 0.8 * smoothedNoseY;
+                        // Use centroid of triangle
+                        stableY = (nose.y + leftShoulder.y + rightShoulder.y) / 3;
                     }
 
+                    // 4. Velocity Check History
+                    yHistory.push(stableY);
+                    if (yHistory.length > 5) yHistory.shift();
+
+                    // 2. Schmitt Trigger Thresholds
+                    const range = downY - upY;
+                    const downThreshold = upY + (range * 0.80); // 80% down
+                    const upThreshold = upY + (range * 0.30);   // 30% up (return point)
+
                     const now = performance.now();
-                    const DEBOUNCE_DELAY = 300; // ms
 
-                    if (!isDown && smoothedNoseY > thresholdY) {
-                        // Transition UP -> DOWN
-                        if (now - lastStateChangeTime > DEBOUNCE_DELAY) {
+                    if (!isDown) {
+                        // State: UP -> GOING DOWN
+                        // 4. Velocity Check: Ensure directional intent (increasing Y)
+                        const hasDownwardIntent = yHistory.length === 5 && (yHistory[4] > yHistory[0]);
+
+                        if (stableY > downThreshold && hasDownwardIntent) {
                             isDown = true;
-                            lastStateChangeTime = now;
                         }
-                    } else if (isDown && smoothedNoseY < thresholdY) {
-                        // Transition DOWN -> UP (Complete Rep)
-                        if (now - lastStateChangeTime > DEBOUNCE_DELAY) {
-                            isDown = false;
-                            lastStateChangeTime = now;
-                            
-                            sessionCount++;
-                            totalCount++;
-                            sessionCountDisplay.innerText = sessionCount;
-                            
-                            totalDisplay.innerText = totalCount;
-                            updateGoalProgress();
-                            
-                            // Pulse Animation
-                            sessionCountDisplay.classList.add('pulse-anim');
-                            setTimeout(() => sessionCountDisplay.classList.remove('pulse-anim'), 300);
+                    } else if (isDown) {
+                        // State: DOWN -> GOING UP
+                        if (stableY < upThreshold) {
+                            // 3. Temporal Debouncing
+                            if (now - lastCountTime > MIN_CYCLE_TIME) {
+                                isDown = false;
+                                lastCountTime = now;
+                                
+                                // Trigger Count
+                                sessionCount++;
+                                totalCount++;
+                                sessionCountDisplay.innerText = sessionCount;
+                                
+                                totalDisplay.innerText = totalCount;
+                                updateGoalProgress();
+                                
+                                // Pulse Animation
+                                sessionCountDisplay.classList.add('pulse-anim');
+                                setTimeout(() => sessionCountDisplay.classList.remove('pulse-anim'), 300);
 
-                            playBeep();
-                            speakCount(sessionCount);
-                            logProstrationEvent(); // Log to Firestore
+                                playBeep();
+                                speakCount(sessionCount);
+                                logProstrationEvent(); // Log to Firestore
 
-                            // Goal Check
-                            if (targetGoal > 0 && sessionCount === targetGoal) {
-                                handleGoalReached();
+                                // Goal Check
+                                if (targetGoal > 0 && sessionCount === targetGoal) {
+                                    handleGoalReached();
+                                }
                             }
                         }
                     }
@@ -908,6 +933,7 @@ async function predictWebcam() {
         } else {
             currentPose = null;
             smoothedNoseY = null;
+            yHistory = [];
         }
         canvasCtx.restore();
     }
