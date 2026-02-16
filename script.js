@@ -46,6 +46,7 @@ const goalProgressBarFill = document.getElementById('goalProgressBarFill');
 const goalProgressText = document.getElementById('goalProgressText');
 const drawingUtils = new DrawingUtils(canvasCtx);
 const loginBtn = document.getElementById('loginBtn');
+const installBtn = document.getElementById('installBtn');
 const userProfile = document.getElementById('userProfile');
 const userAvatar = document.getElementById('userAvatar');
 const signOutBtn = document.getElementById('signOutBtn');
@@ -947,3 +948,25 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js');
     });
 }
+
+// PWA Install Logic
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.classList.remove('hidden');
+});
+
+installBtn.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    installBtn.classList.add('hidden');
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+});
+
+window.addEventListener('appinstalled', () => {
+    installBtn.classList.add('hidden');
+    deferredPrompt = null;
+});
